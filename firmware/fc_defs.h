@@ -27,8 +27,8 @@
 
 #pragma once
 
-#define LED_STRIPS              8
-#define LEDS_PER_STRIP          64
+#define LED_STRIPS              6
+#define LEDS_PER_STRIP          120
 #define LEDS_TOTAL              (LEDS_PER_STRIP * LED_STRIPS)
 #define CHANNELS_TOTAL          (LEDS_TOTAL * 3)
 
@@ -41,7 +41,9 @@
 #define PACKETS_PER_FRAME       ((LEDS_TOTAL + PIXELS_PER_PACKET - 1) / PIXELS_PER_PACKET)
 #define PACKETS_PER_LUT         ((LUT_TOTAL_SIZE + LUTENTRIES_PER_PACKET - 1) / LUTENTRIES_PER_PACKET)
 
-#define NUM_USB_BUFFERS         104       // Three full frames (3*25), one LUT buffer (25), a little extra (4)
+// Three full frames, one LUT buffer, a little extra (4)
+//#define NUM_USB_BUFFERS         ((3 * PACKETS_PER_FRAME) + (PACKETS_PER_LUT) + 4)
+#define NUM_USB_BUFFERS         ((2 * PACKETS_PER_FRAME) + (PACKETS_PER_LUT) + 4)
 
 #define VENDOR_ID               0x1d50    // OpenMoko
 #define PRODUCT_ID              0x607a    // Assigned to Fadecandy project

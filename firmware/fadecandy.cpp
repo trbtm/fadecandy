@@ -43,7 +43,7 @@ static OctoWS2811z leds(LEDS_PER_STRIP, ledBuffer, WS2811_800kHz);
  * to saturate values before storing. So, 16-bit it is.
  */
 typedef int16_t residual_t;
-static residual_t residual[CHANNELS_TOTAL];
+static residual_t residual[0]; // CHANNELS_TOTAL];
 
 // Reserved RAM area for signalling entry to bootloader
 extern uint32_t boot_token;
@@ -62,6 +62,8 @@ extern uint32_t boot_token;
 #undef FCP_INTERPOLATION
 #undef FCP_DITHERING
 #undef FCP_FN
+
+#if 0
 
 #define FCP_INTERPOLATION   1
 #define FCP_DITHERING       0
@@ -93,6 +95,7 @@ extern uint32_t boot_token;
 #undef FCP_DITHERING
 #undef FCP_FN
 
+#endif
 
 static inline uint32_t calculateInterpCoefficient()
 {
@@ -155,6 +158,10 @@ extern "C" int main()
     while (usb_dfu_state == DFU_appIDLE) {
         watchdog_refresh();
 
+                updateDrawBuffer_I0_D0(0x10000);
+/*
+        buffers.flags |= CFLAG_NO_INTERPOLATION | CFLAG_NO_DITHERING;
+
         // Select a different drawing loop based on our firmware config flags
         switch (buffers.flags & (CFLAG_NO_INTERPOLATION | CFLAG_NO_DITHERING)) {
             case 0:
@@ -171,12 +178,13 @@ extern "C" int main()
                 updateDrawBuffer_I0_D0(0x10000);
                 break;
         }
+*/
 
         // Start sending the next frame over DMA
         leds.show();
 
         // We can switch to the next frame's buffer now.
-        buffers.finalizeFrame();
+        buffers.finalizeFrame(false);
 
         // Performance counter, for monitoring frame rate externally
         perf_frameCounter++;

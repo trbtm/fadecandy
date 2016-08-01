@@ -123,7 +123,7 @@ struct fcBuffers
     fcFramebuffer *fbNext;      // Frame we're interpolating to
     fcFramebuffer *fbNew;       // Partial frame, getting ready to become fbNext
 
-    fcFramebuffer fb[3];        // Triple-buffered video frames
+    fcFramebuffer fb[2];        // Triple-buffered video frames
 
     fcColorLUT lutNew;                // Partial LUT, not yet finalized
     static fcLinearLUT lutCurrent;    // Active LUT, linearized for efficiency
@@ -133,18 +133,18 @@ struct fcBuffers
     fcBuffers()
     {
         fbPrev = &fb[0];
-        fbNext = &fb[1];
-        fbNew = &fb[2];
+        fbNext = &fb[0];
+        fbNew = &fb[1];
     }
 
     // Interrupt context
     bool handleUSB(usb_packet_t *packet);
 
     // Main loop context
-    void finalizeFrame();
+    void finalizeFrame(bool doubleBuffer);
 
 private:
-    void finalizeFramebuffer();
+    void finalizeFramebuffer(bool doubleBuffer);
     void finalizeLUT();
 
     // Status communicated between handleUSB() and finalizeFrame()
