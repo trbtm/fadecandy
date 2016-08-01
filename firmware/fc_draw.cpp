@@ -107,6 +107,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
         o0.p0b = p0 >> 22;
         o0.p0a = p0 >> 23;
 
+#if LED_STRIPS >= 2
         uint32_t p1 = FCP_FN(updatePixel)(icPrev, icNext,
             buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 1),
             buffers.fbNext->pixel(i + LEDS_PER_STRIP * 1),
@@ -136,7 +137,9 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
         o0.p1c = p1 >> 21;
         o0.p1b = p1 >> 22;
         o0.p1a = p1 >> 23;
+#endif
 
+#if LED_STRIPS >= 3
         uint32_t p2 = FCP_FN(updatePixel)(icPrev, icNext,
             buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 2),
             buffers.fbNext->pixel(i + LEDS_PER_STRIP * 2),
@@ -166,7 +169,9 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
         o0.p2c = p2 >> 21;
         o0.p2b = p2 >> 22;
         o0.p2a = p2 >> 23;
+#endif
 
+#if LED_STRIPS >= 4
         uint32_t p3 = FCP_FN(updatePixel)(icPrev, icNext,
             buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 3),
             buffers.fbNext->pixel(i + LEDS_PER_STRIP * 3),
@@ -196,7 +201,9 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
         o0.p3c = p3 >> 21;
         o0.p3b = p3 >> 22;
         o0.p3a = p3 >> 23;
+#endif
 
+#if LED_STRIPS >= 5
         uint32_t p4 = FCP_FN(updatePixel)(icPrev, icNext,
             buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 4),
             buffers.fbNext->pixel(i + LEDS_PER_STRIP * 4),
@@ -226,7 +233,9 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
         o0.p4c = p4 >> 21;
         o0.p4b = p4 >> 22;
         o0.p4a = p4 >> 23;
+#endif
 
+#if LED_STRIPS >= 6
         uint32_t p5 = FCP_FN(updatePixel)(icPrev, icNext,
             buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 5),
             buffers.fbNext->pixel(i + LEDS_PER_STRIP * 5),
@@ -256,7 +265,9 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
         o0.p5c = p5 >> 21;
         o0.p5b = p5 >> 22;
         o0.p5a = p5 >> 23;
+#endif
 
+#if LED_STRIPS >= 7
         uint32_t p6 = FCP_FN(updatePixel)(icPrev, icNext,
             buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 6),
             buffers.fbNext->pixel(i + LEDS_PER_STRIP * 6),
@@ -286,7 +297,9 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
         o0.p6c = p6 >> 21;
         o0.p6b = p6 >> 22;
         o0.p6a = p6 >> 23;
+#endif
 
+#if LED_STRIPS >= 8
         uint32_t p7 = FCP_FN(updatePixel)(icPrev, icNext,
             buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 7),
             buffers.fbNext->pixel(i + LEDS_PER_STRIP * 7),
@@ -316,6 +329,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
         o0.p7c = p7 >> 21;
         o0.p7b = p7 >> 22;
         o0.p7a = p7 >> 23;
+#endif
 
         *(out++) = o0.word;
         *(out++) = o1.word;
