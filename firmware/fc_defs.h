@@ -35,10 +35,10 @@
 #define LUT_TOTAL_SIZE          (LUT_CH_SIZE * 3)
 
 // USB packet layout
-#define PIXELS_PER_PACKET       21
+#define PIXELS_PER_PACKET       20
 #define LUTENTRIES_PER_PACKET   31
-#define PACKETS_PER_FRAME       25
-#define PACKETS_PER_LUT         25
+#define PACKETS_PER_FRAME       ((LEDS_TOTAL + PIXELS_PER_PACKET - 1) / PIXELS_PER_PACKET)
+#define PACKETS_PER_LUT         ((LUT_TOTAL_SIZE + LUTENTRIES_PER_PACKET - 1) / LUTENTRIES_PER_PACKET)
 
 #define NUM_USB_BUFFERS         104       // Three full frames (3*25), one LUT buffer (25), a little extra (4)
 
