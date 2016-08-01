@@ -27,8 +27,9 @@
 
 #pragma once
 
+#define LED_STRIPS              8
 #define LEDS_PER_STRIP          64
-#define LEDS_TOTAL              (LEDS_PER_STRIP * 8)
+#define LEDS_TOTAL              (LEDS_PER_STRIP * LED_STRIPS)
 #define CHANNELS_TOTAL          (LEDS_TOTAL * 3)
 
 #define LUT_CH_SIZE             257
