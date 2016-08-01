@@ -28,7 +28,6 @@
 
 #define TYPE_BITS           0xC0
 #define FINAL_BIT           0x20
-#define INDEX_BITS          0x1F
 
 #define TYPE_FRAMEBUFFER    0x00
 #define TYPE_LUT            0x40
@@ -70,7 +69,6 @@ bool fcBuffers::handleUSB(usb_packet_t *packet)
     unsigned control = packet->buf[0];
     unsigned type = control & TYPE_BITS;
     unsigned final = control & FINAL_BIT;
-    unsigned index = control & INDEX_BITS;
 
     switch (type) {
 
@@ -82,7 +80,7 @@ bool fcBuffers::handleUSB(usb_packet_t *packet)
                 return false;
             }
 
-            fbNew->store(index, packet);
+            fbNew->store(packet->buf[1], packet);
             if (final) {
                 pendingFinalizeFrame = true;
             }
@@ -90,7 +88,7 @@ bool fcBuffers::handleUSB(usb_packet_t *packet)
 
         case TYPE_LUT:
             // LUT accesses are not synchronized
-            lutNew.store(index, packet);
+            lutNew.store(packet->buf[1], packet);
 
             if (final) {
                 // Finalize the LUT on the main thread, it's less async than doing it in the ISR.

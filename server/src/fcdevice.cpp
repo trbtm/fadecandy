@@ -69,14 +69,16 @@ FCDevice::FCDevice(libusb_device *device, bool verbose)
     // Framebuffer headers
     memset(mFramebuffer, 0, sizeof mFramebuffer);
     for (unsigned i = 0; i < FRAMEBUFFER_PACKETS; ++i) {
-        mFramebuffer[i].control = TYPE_FRAMEBUFFER | i;
+        mFramebuffer[i].control = TYPE_FRAMEBUFFER;
+        mFramebuffer[i].data[0] = i;
     }
     mFramebuffer[FRAMEBUFFER_PACKETS - 1].control |= FINAL;
 
     // Color LUT headers
     memset(mColorLUT, 0, sizeof mColorLUT);
     for (unsigned i = 0; i < LUT_PACKETS; ++i) {
-        mColorLUT[i].control = TYPE_LUT | i;
+        mColorLUT[i].control = TYPE_LUT;
+        mColorLUT[i].data[0] = i;
     }
     mColorLUT[LUT_PACKETS - 1].control |= FINAL;
 }
@@ -308,7 +310,7 @@ void FCDevice::writeColorCorrection(const Value &color)
      */
 
     Packet *packet = mColorLUT;
-    const unsigned firstByteOffset = 1;  // Skip padding byte
+    const unsigned firstByteOffset = 1;  // Skip index byte
     unsigned byteOffset = firstByteOffset;
 
     for (unsigned channel = 0; channel < 3; channel++) {
