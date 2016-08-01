@@ -34,7 +34,7 @@
 #define TYPE_CONFIG         0x80
 
 
-void fcBuffers::finalizeFrame()
+void fcBuffers::finalizeFrame(bool doubleBuffer)
 {
     // Called in main loop context.
     // Finalize any frames received during the course of this loop iteration,
@@ -50,7 +50,7 @@ void fcBuffers::finalizeFrame()
     handledAnyPacketsThisFrame = false;
 
     if (pendingFinalizeFrame) {
-        finalizeFramebuffer();
+        finalizeFramebuffer(doubleBuffer);
         pendingFinalizeFrame = false;
     }
 
@@ -63,7 +63,7 @@ void fcBuffers::finalizeFrame()
     usb_rx_resume();
 }
 
-
+// Called from an interrupt context so we need to take care with synchronization.
 bool fcBuffers::handleUSB(usb_packet_t *packet)
 {
     unsigned control = packet->buf[0];
@@ -112,14 +112,22 @@ bool fcBuffers::handleUSB(usb_packet_t *packet)
     return true;
 }
 
-void fcBuffers::finalizeFramebuffer()
+void fcBuffers::finalizeFramebuffer(bool doubleBuffer)
 {
-    fcFramebuffer *recycle = fbPrev;
     fbNew->timestamp = millis();
-    fbPrev = fbNext;
-    fbNext = fbNew;
-    fbNew = recycle;
     perf_receivedKeyframeCounter++;
+
+    if (doubleBuffer) {
+        fcFramebuffer *recycle = fbPrev;
+        fbPrev = fbNext;
+        fbNext = fbNew;
+        fbNew = recycle;
+    } else {
+        fcFramebuffer *recycle = fbNext;
+        fbPrev = fbNew;
+        fbNext = fbNew;
+        fbNew = recycle;
+    }
 }
 
 void fcBuffers::finalizeLUT()

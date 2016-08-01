@@ -31,7 +31,7 @@
 
 const char *kDefaultConfig =
     "    {\n"
-    "        \"listen\": [\"127.0.0.1\", 7890],\n"
+    "        \"listen\": [\"0.0.0.0\", 7890],\n"
     "        \"verbose\": true,\n"
     "    \n"
     "        \"color\": {\n"
@@ -42,7 +42,7 @@ const char *kDefaultConfig =
     "        \"devices\": [\n"
     "            {\n"
     "                \"type\": \"fadecandy\",\n"
-    "                \"map\": [[ 0, 0, 0, 512 ]]\n"
+    "                \"map\": [[ 0, 0, 0, 720 ]]\n"
     "            }\n"
     "        ]\n"
     "    }\n";
