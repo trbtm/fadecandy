@@ -39,14 +39,14 @@
 __attribute__ ((section(".usbbuffers"), used))
 unsigned char usb_buffer_memory[NUM_USB_BUFFERS * sizeof(usb_packet_t)];
 
-static uint32_t usb_buffer_available[4];
+static uint32_t usb_buffer_available[(NUM_USB_BUFFERS + 31) / 32];
 
 void usb_init_mem()
 {
-    usb_buffer_available[0] = -1;
-    usb_buffer_available[1] = -1;
-    usb_buffer_available[2] = -1;
-    usb_buffer_available[3] = -1;
+    unsigned int idx = 0;
+    do {
+        usb_buffer_available[idx++] = -1;
+    } while (idx < sizeof(usb_buffer_available) / sizeof(usb_buffer_available[0]));
 }
 
 // use bitmask and CLZ instruction to implement fast free list
