@@ -27,6 +27,8 @@
 #include <algorithm>
 #include "OctoWS2811z.h"
 
+/* 50 for WS2812B, 300 for WS2813 */
+#define RESET_INTERVAL 300
 
 uint16_t OctoWS2811z::stripLen;
 void * OctoWS2811z::frameBuffer;
@@ -177,7 +179,7 @@ int OctoWS2811z::busy(void)
     //if (DMA_ERQ & 0xE) return 1;
     if (update_in_progress) return 1;
     // busy for 50 us after the done interrupt, for WS2811 reset
-    if (micros() - update_completed_at < 50) return 1;
+    if (micros() - update_completed_at < RESET_INTERVAL) return 1;
     return 0;
 }
 
@@ -193,7 +195,7 @@ void OctoWS2811z::show(void)
     DMA_TCD2_SADDR = frameBuffer;
 
     // wait for WS2811 reset
-    while (micros() - update_completed_at < 50) ;
+    while (micros() - update_completed_at < RESET_INTERVAL) ;
 
     // ok to start, but we must be very careful to begin
     // without any prior 3 x 800kHz DMA requests pending
