@@ -6,11 +6,11 @@
 
 import opc, time
 
-numStrings = 8
+numStrings = 6
 client = opc.Client('localhost:7890')
 
-string = [ (128, 128, 128) ] * 64
-for i in range(7):
+string = [ (128, 128, 128) ] * 120
+for i in range(12):
 	string[10 * i] = (128, 255, 128)
 
 # Immediately display new frame
