@@ -34,7 +34,7 @@
  * SOFTWARE.
  */
 
-#include "mk20dx128.h"
+#include "hw/mk20dx128.h"
 
 typedef void (*initFunc_t)(void);
 

@@ -24,11 +24,11 @@ APP_HEX = app-image.hex
 # Sources
 C_FILES = \
 	startup.c \
-	pins_teensy.c \
-	usb_desc.c \
-	usb_dev.c \
-	usb_mem.c \
-	serial1.c
+	hw/pins_teensy.c \
+	hw/usb_desc.c \
+	hw/usb_dev.c \
+	hw/usb_mem.c \
+	hw/serial1.c
 
 CPP_FILES = \
 	fadecandy.cpp \
@@ -83,7 +83,7 @@ benchmark: install
 -include $(OBJS:.o=.d)
 
 clean:
-	rm -f *.d *.o $(TARGET).elf $(TARGET).dfu $(APP_HEX)
+	rm -f $(OBJS) $(OBJS:.o=.d) $(TARGET).elf $(TARGET).dfu $(APP_HEX)
 
 disassemble: $(TARGET).elf
 	$(OBJDUMP) -d $< | less

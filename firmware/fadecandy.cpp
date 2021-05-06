@@ -24,10 +24,10 @@
 #include <math.h>
 #include <algorithm>
 #include "OctoWS2811z.h"
-#include "arm_math.h"
+#include "arm/arm_math.h"
 #include "fc_usb.h"
 #include "fc_defs.h"
-#include "HardwareSerial.h"
+#include "hw/HardwareSerial.h"
 
 // USB data buffers
 static fcBuffers buffers;
