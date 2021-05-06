@@ -201,7 +201,7 @@ void OctoWS2811z::show(void)
     // without any prior 3 x 800kHz DMA requests pending
     sc = FTM1_SC;
     cv = FTM1_C1V;
-    noInterrupts();
+    __disable_irq();
     // CAUTION: this code is timing critical.  Any editing should be
     // tested by verifying the oscilloscope trigger pulse at the end
     // always occurs while both waveforms are still low.  Simply
@@ -223,5 +223,5 @@ void OctoWS2811z::show(void)
     DMA_ERQ = 0x0E;     // enable all 3 DMA channels
     FTM1_SC = sc;       // restart FTM1 timer
     //digitalWriteFast(1, LOW);
-    interrupts();
+    __enable_irq();
 }
