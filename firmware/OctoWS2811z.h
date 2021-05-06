@@ -23,8 +23,7 @@
     THE SOFTWARE.
 */
 
-#include "hw/WProgram.h"
-#include "hw/pins_arduino.h"
+#include <stdint.h>
 
 #define WS2811_800kHz 0x00  // Nearly all WS2811 are 800 kHz
 #define WS2811_400kHz 0x10  // Adafruit's Flora Pixels

@@ -27,6 +27,9 @@
 #include <algorithm>
 #include "OctoWS2811z.h"
 
+#include "hw/core_pins.h"
+
+
 /* 50 for WS2812B, 300 for WS2813 */
 #define RESET_INTERVAL 300
 

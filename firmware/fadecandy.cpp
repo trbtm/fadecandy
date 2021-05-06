@@ -28,6 +28,8 @@
 #include "fc_usb.h"
 #include "fc_defs.h"
 #include "hw/HardwareSerial.h"
+#include "hw/pins_arduino.h"
+#include "hw/core_pins.h"
 
 // USB data buffers
 static fcBuffers buffers;

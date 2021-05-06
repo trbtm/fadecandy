@@ -22,7 +22,8 @@
  */
 
 #pragma once
-#include "hw/WProgram.h"
+
+//#include "hw/WProgram.h"
 #include "hw/usb_dev.h"
 #include "fc_defs.h"
 

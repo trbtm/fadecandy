@@ -24,6 +24,8 @@
 #include "fc_usb.h"
 #include <algorithm>
 
+#include "hw/core_pins.h"
+
 // USB protocol definitions
 
 #define TYPE_BITS           0xC0
