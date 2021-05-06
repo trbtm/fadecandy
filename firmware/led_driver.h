@@ -1,3 +1,10 @@
+/*
+ * Simplified LED driver for SK6812 pixels based on OctoWS2811.
+ *
+ * Clients are responsible for managing buffers and waiting for the LEDs
+ * to be ready to receive new data.
+ */
+
 /*  OctoWS2811 - High Performance WS2811 LED Display Library
     http://www.pjrc.com/teensy/td_libs_OctoWS2811.html
     Copyright (c) 2013 Paul Stoffregen, PJRC.COM, LLC
@@ -23,29 +30,28 @@
     THE SOFTWARE.
 */
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <stddef.h>
 
-#define WS2811_800kHz 0x00  // Nearly all WS2811 are 800 kHz
-#define WS2811_400kHz 0x10  // Adafruit's Flora Pixels
+namespace led {
 
+// Computes the size of buffer required for a set of 8 LED strips of given length.
+constexpr size_t bufferSize(size_t ledsPerStrip) { return ledsPerStrip * 24; }
 
-class OctoWS2811z {
-public:
-    // Buffers: 48 bytes * numPerStrip
-    OctoWS2811z(uint32_t numPerStrip, void *buffer, uint8_t config = 0);
-    void begin(void);
+// Initialize the GPIOs and DMA for LED output.
+void init(size_t ledsPerStrip);
 
-    void* getDrawBuffer() {
-        return drawBuffer;
-    }
+// Returns true if all prior writes have finished and the LEDs are ready to receive
+// new data taking into account the LED protocol's timing requirements.
+bool ready();
 
-    void show(void);
-    int busy(void);
+// Returns true if all prior writes have finished.
+bool writeFinished();
 
-private:
-    static uint16_t stripLen;
-    static void *frameBuffer;
-    static void *drawBuffer;
-    static uint8_t params;
-};
-
+// Writes a buffer of encoded LED data to the DMA engine.
+// This operation completes asynchronously: the client must not modify the contents of
+// the buffer again until |writeFinished()| returns true.
+// Assumes the LEDs are ready to receive more data.
+void write(const uint8_t* buffer);
+}

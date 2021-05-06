@@ -22,7 +22,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
+static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer)
 {
     /*
      * Update the LED draw buffer. In one step, we do the interpolation,
@@ -35,7 +35,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient)
      */
 
     // For each pixel, this is a 24-byte stream of bits (6 words)
-    uint32_t *out = (uint32_t*) leds.getDrawBuffer();
+    uint32_t *out = (uint32_t*) buffer;
 
     /*
      * Interpolation coefficients, including a multiply by 257 to convert 8-bit color to 16-bit color.

@@ -21,9 +21,11 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <stddef.h>
 #include <math.h>
 #include <algorithm>
-#include "OctoWS2811z.h"
+
+#include "led_driver.h"
 #include "arm/arm_math.h"
 #include "fc_usb.h"
 #include "fc_defs.h"
@@ -37,8 +39,7 @@ fcLinearLUT fcBuffers::lutCurrent;
 
 // Double-buffered DMA memory for raw bit planes of output
 #define DMAMEM __attribute__ ((section(".dmabuffers"), used))
-static DMAMEM int ledBuffer[LEDS_PER_STRIP * 12];
-static OctoWS2811z leds(LEDS_PER_STRIP, ledBuffer, WS2811_800kHz);
+static DMAMEM uint8_t ledBuffer[2][led::bufferSize(LEDS_PER_STRIP)];
 
 /*
  * Residuals for temporal dithering. Usually 8 bits is enough, but
@@ -151,17 +152,20 @@ extern "C" int usb_rx_handler(usb_packet_t *packet)
 extern "C" int main()
 {
     pinMode(LED_BUILTIN, OUTPUT);
-    leds.begin();
+    led::init(LEDS_PER_STRIP);
 
     // Announce firmware version
     serial_begin(BAUD2DIV(115200));
     serial_print("Fadecandy v" DEVICE_VER_STRING "\r\n");
 
     // Application main loop
+    uint8_t* frontBuffer = ledBuffer[0];
+    uint8_t* backBuffer = ledBuffer[1];
+
     while (usb_dfu_state == DFU_appIDLE) {
         watchdog_refresh();
 
-                updateDrawBuffer_I0_D0(0x10000);
+        updateDrawBuffer_I0_D0(0x10000, backBuffer);
 /*
         buffers.flags |= CFLAG_NO_INTERPOLATION | CFLAG_NO_DITHERING;
 
@@ -184,7 +188,9 @@ extern "C" int main()
 */
 
         // Start sending the next frame over DMA
-        leds.show();
+        while (!led::ready());
+        led::write(backBuffer);
+        std::swap(frontBuffer, backBuffer);
 
         // We can switch to the next frame's buffer now.
         buffers.finalizeFrame(false);

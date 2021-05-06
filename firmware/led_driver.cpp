@@ -1,3 +1,10 @@
+/*
+ * Simplified LED driver for SK6812 pixels based on OctoWS2811.
+ *
+ * Clients are responsible for managing buffers and waiting for the LEDs
+ * to be ready to receive new data.
+ */
+
 /*  OctoWS2811 - High Performance WS2811 LED Display Library
     http://www.pjrc.com/teensy/td_libs_OctoWS2811.html
     Copyright (c) 2013 Paul Stoffregen, PJRC.COM, LLC
@@ -23,34 +30,16 @@
     THE SOFTWARE.
 */
 
-#include <string.h>
-#include <algorithm>
-#include "OctoWS2811z.h"
+#include "led_driver.h"
 
 #include "hw/core_pins.h"
 
+namespace led {
+// LED strip reset interval in microseconds.
+constexpr uint32_t SK6812_RESET_INTERVAL = 80;
 
-/* 50 for WS2812B, 300 for WS2813 */
-#define RESET_INTERVAL 300
-
-uint16_t OctoWS2811z::stripLen;
-void * OctoWS2811z::frameBuffer;
-void * OctoWS2811z::drawBuffer;
-uint8_t OctoWS2811z::params;
-
-
-static const uint8_t ones = 0xFF;
-static volatile uint8_t update_in_progress = 0;
-static uint32_t update_completed_at = 0;
-
-
-OctoWS2811z::OctoWS2811z(uint32_t numPerStrip, void *buffer, uint8_t config)
-{
-    stripLen = numPerStrip;
-    frameBuffer = buffer;
-    drawBuffer = (24 * numPerStrip) + (uint8_t*) buffer;
-    params = config;
-}
+// LED strip frequency.
+constexpr uint32_t SK6812_FREQUENCY = 800000;
 
 // Waveform timing: these set the high time for a 0 and 1 bit, as a fraction of
 // the total 800 kHz or 400 kHz clock cycle.  The scale is 0 to 255.  The Worldsemi
@@ -67,22 +56,19 @@ OctoWS2811z::OctoWS2811z(uint32_t numPerStrip, void *buffer, uint8_t config)
 // have an insight about tuning these parameters AND you have actually tested on
 // real LED strips, please contact paul@pjrc.com.  Please do not email based only
 // on reading the datasheets and purely theoretical analysis.
-#define WS2811_TIMING_T0H  60
-#define WS2811_TIMING_T1H  176
+//
+// TODO: Measure this more precisely for SK6812.
+constexpr uint32_t WS2811_TIMING_T0H = 60;
+constexpr uint32_t WS2811_TIMING_T1H = 176;
 
+const uint8_t ONES = 0xFF;
 
-void OctoWS2811z::begin(void)
-{
-    uint32_t bufsize, frequency;
+volatile bool writeInProgress = false;
+uint32_t writeFinishedAt = 0;
 
-    bufsize = stripLen*24;
+void init(size_t ledsPerStrip) {
+    const size_t bufsize = bufferSize(ledsPerStrip);
 
-    // Clear both front and back buffers
-    for (unsigned i = 0; i < bufsize; i++) {
-        ((uint8_t*)frameBuffer)[i] = 0;
-        ((uint8_t*)drawBuffer)[i] = 0;
-    }
-    
     // configure the 8 output pins
     GPIOD_PCOR = 0xFF;
     pinMode(2, OUTPUT); // strip #1
@@ -95,23 +81,22 @@ void OctoWS2811z::begin(void)
     pinMode(5, OUTPUT); // strip #8
 
     // create the two waveforms for WS2811 low and high bits
-    frequency = (params & WS2811_400kHz) ? 400000 : 800000;
-    analogWriteFrequency(3, frequency);
-    analogWriteFrequency(4, frequency);
+    analogWriteFrequency(3, SK6812_FREQUENCY);
+    analogWriteFrequency(4, SK6812_FREQUENCY);
     analogWrite(3, WS2811_TIMING_T0H);
     analogWrite(4, WS2811_TIMING_T1H);
 
     // pin 16 triggers DMA(port B) on rising edge (configure for pin 3's waveform)
-    CORE_PIN16_CONFIG = PORT_PCR_IRQC(1)|PORT_PCR_MUX(3);
+    CORE_PIN16_CONFIG = PORT_PCR_IRQC(1) | PORT_PCR_MUX(3);
     pinMode(3, INPUT_PULLUP); // pin 3 no longer needed
 
     // pin 15 triggers DMA(port C) on falling edge of low duty waveform
     // pin 15 and 16 must be connected by the user: 16 is output, 15 is input
     pinMode(15, INPUT);
-    CORE_PIN15_CONFIG = PORT_PCR_IRQC(2)|PORT_PCR_MUX(1);
+    CORE_PIN15_CONFIG = PORT_PCR_IRQC(2) | PORT_PCR_MUX(1);
 
     // pin 4 triggers DMA(port A) on falling edge of high duty waveform
-    CORE_PIN4_CONFIG = PORT_PCR_IRQC(2)|PORT_PCR_MUX(3);
+    CORE_PIN4_CONFIG = PORT_PCR_IRQC(2) | PORT_PCR_MUX(3);
 
     // enable clocks to the DMA controller and DMAMUX
     SIM_SCGC7 |= SIM_SCGC7_DMA;
@@ -120,7 +105,7 @@ void OctoWS2811z::begin(void)
     DMA_ERQ = 0;
 
     // DMA channel #1 sets WS2811 high at the beginning of each cycle
-    DMA_TCD1_SADDR = &ones;
+    DMA_TCD1_SADDR = &ONES;
     DMA_TCD1_SOFF = 0;
     DMA_TCD1_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
     DMA_TCD1_NBYTES_MLNO = 1;
@@ -145,7 +130,7 @@ void OctoWS2811z::begin(void)
     DMA_TCD2_BITER_ELINKNO = bufsize;
 
     // DMA channel #3 clear all the pins low at 48% of the cycle
-    DMA_TCD3_SADDR = &ones;
+    DMA_TCD3_SADDR = &ONES;
     DMA_TCD3_SOFF = 0;
     DMA_TCD3_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
     DMA_TCD3_NBYTES_MLNO = 1;
@@ -168,42 +153,28 @@ void OctoWS2811z::begin(void)
     // enable a done interrupts when channel #3 completes
     NVIC_ENABLE_IRQ(IRQ_DMA_CH3);
     //pinMode(1, OUTPUT); // testing: oscilloscope trigger
+
+    // Ensure that the reset interval is respected even on the first frame.
+    writeFinishedAt = micros();
+    writeInProgress = false;
 }
 
-void dma_ch3_isr(void)
-{
-    DMA_CINT = 3;
-    update_completed_at = micros();
-    update_in_progress = 0;
+bool ready() {
+    return !writeInProgress &&
+            micros() - writeFinishedAt >= SK6812_RESET_INTERVAL;
 }
 
-int OctoWS2811z::busy(void)
-{
-    //if (DMA_ERQ & 0xE) return 1;
-    if (update_in_progress) return 1;
-    // busy for 50 us after the done interrupt, for WS2811 reset
-    if (micros() - update_completed_at < RESET_INTERVAL) return 1;
-    return 0;
+bool writeFinished() {
+    return !writeInProgress;
 }
 
-void OctoWS2811z::show(void)
-{
-    uint32_t cv, sc;
-
-    // wait for any prior DMA operation
-    while (update_in_progress) ; 
-
-    // Swap buffer pointers without copying
-    std::swap(frameBuffer, drawBuffer);
-    DMA_TCD2_SADDR = frameBuffer;
-
-    // wait for WS2811 reset
-    while (micros() - update_completed_at < RESET_INTERVAL) ;
+void write(const uint8_t* buffer) {
+    DMA_TCD2_SADDR = buffer;
 
     // ok to start, but we must be very careful to begin
     // without any prior 3 x 800kHz DMA requests pending
-    sc = FTM1_SC;
-    cv = FTM1_C1V;
+    uint32_t sc = FTM1_SC;
+    uint32_t cv = FTM1_C1V;
     __disable_irq();
     // CAUTION: this code is timing critical.  Any editing should be
     // tested by verifying the oscilloscope trigger pulse at the end
@@ -214,7 +185,7 @@ void OctoWS2811z::show(void)
     // display set at infinite persistence and a variety of other I/O
     // performed to create realistic bus usage.  Even then, you really
     // should not mess with this timing critical code!
-    update_in_progress = 1;
+    writeInProgress = true;
     while (FTM1_CNT <= cv) ; 
     while (FTM1_CNT > cv) ; // wait for beginning of an 800 kHz cycle
     while (FTM1_CNT < cv) ;
@@ -227,4 +198,12 @@ void OctoWS2811z::show(void)
     FTM1_SC = sc;       // restart FTM1 timer
     //digitalWriteFast(1, LOW);
     __enable_irq();
+}
+
+} // namespace led
+
+extern "C" void dma_ch3_isr() {
+    DMA_CINT = 3;
+    led::writeFinishedAt = micros();
+    led::writeInProgress = false;
 }

@@ -31,9 +31,9 @@ C_FILES = \
 	hw/serial1.c
 
 CPP_FILES = \
+	led_driver.cpp \
 	fadecandy.cpp \
-	fc_usb.cpp \
-	OctoWS2811z.cpp
+	fc_usb.cpp
 
 # Headers
 INCLUDES = -I.
