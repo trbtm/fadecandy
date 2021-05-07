@@ -39,11 +39,13 @@ CPP_FILES = \
 INCLUDES = -I.
 
 # CPPFLAGS = compiler options for C and C++
-CPPFLAGS = -Wall -Wno-sign-compare -Wno-strict-aliasing -g -Os -mcpu=cortex-m4 \
-	-mthumb -nostdlib -fno-tree-loop-distribute-patterns -MMD -Werror $(OPTIONS) $(INCLUDES)
+CPPFLAGS = -Werror -Wall -Wno-sign-compare -Wno-strict-aliasing \
+	-g -O3 -mcpu=cortex-m4 -mthumb -nostdlib \
+	-fno-tree-loop-distribute-patterns -MMD \
+	$(OPTIONS) $(INCLUDES)
 
 # compiler options for C++ only
-CXXFLAGS = -std=gnu++0x -felide-constructors -fno-exceptions -fno-rtti
+CXXFLAGS = -std=c++17 -felide-constructors -fno-exceptions -fno-rtti
 
 # compiler options for C only
 CFLAGS =
