@@ -25,13 +25,13 @@
 #include <math.h>
 #include <algorithm>
 
-#include "led_driver.h"
+#include "config.h"
 #include "arm/arm_math.h"
-#include "fc_usb.h"
-#include "fc_defs.h"
 #include "hw/HardwareSerial.h"
 #include "hw/pins_arduino.h"
 #include "hw/core_pins.h"
+#include "fc_usb.h"
+#include "led_driver.h"
 
 // USB data buffers
 static fcBuffers buffers;

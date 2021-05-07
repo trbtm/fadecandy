@@ -32,9 +32,10 @@
  * SOFTWARE.
  */
 
-#include "mk20dx128.h"
-#include "usb_dev.h"
 #include "usb_mem.h"
+
+#include "config.h"
+#include "mk20dx128.h"
 
 __attribute__ ((section(".usbbuffers"), used))
 unsigned char usb_buffer_memory[NUM_USB_BUFFERS * sizeof(usb_packet_t)];

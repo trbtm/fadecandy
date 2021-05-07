@@ -21,16 +21,22 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
- * Definitions for Fadecandy, based on the number of supported LEDs
- */
-
 #pragma once
+
+/*** LED matrix configuration ***/
 
 #define LED_STRIPS              6
 #define LEDS_PER_STRIP          120
 #define LEDS_TOTAL              (LEDS_PER_STRIP * LED_STRIPS)
 #define CHANNELS_TOTAL          (LEDS_TOTAL * 3)
+
+/*** USB stack configuration ***/
+
+// USB descriptor information
+#define VENDOR_ID               0x1d50    // OpenMoko
+#define PRODUCT_ID              0x607a    // Assigned to Fadecandy project
+#define DEVICE_VER              0x0200	  // BCD device version
+#define DEVICE_VER_STRING		"2.00"
 
 // USB packet layout
 #define PIXELS_PER_PACKET       20
@@ -38,8 +44,3 @@
 
 // Two frames plus a little extra for packets in flight (4)
 #define NUM_USB_BUFFERS         ((2 * PACKETS_PER_FRAME) + 4)
-
-#define VENDOR_ID               0x1d50    // OpenMoko
-#define PRODUCT_ID              0x607a    // Assigned to Fadecandy project
-#define DEVICE_VER              0x0200	  // BCD device version
-#define DEVICE_VER_STRING		"2.00"

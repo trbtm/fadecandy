@@ -32,8 +32,9 @@
  * SOFTWARE.
  */
 
-#include "mk20dx128.h"
 #include "usb_dev.h"
+
+#include "mk20dx128.h"
 #include "usb_mem.h"
 #include "usb_desc.h"
 

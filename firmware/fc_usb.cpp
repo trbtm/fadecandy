@@ -22,6 +22,7 @@
  */
 
 #include "fc_usb.h"
+
 #include <algorithm>
 
 #include "hw/core_pins.h"
