@@ -32,8 +32,7 @@ C_FILES = \
 
 CPP_FILES = \
 	led_driver.cpp \
-	fadecandy.cpp \
-	fc_usb.cpp
+	fadecandy.cpp
 
 # Headers
 INCLUDES = -I.
