@@ -102,4 +102,4 @@ inline void pushPixels(uint8_t** buffer, Sampler sampler) {
     *(out++) = o4;
     *(out++) = o5;
 }
-}
+} // namespace led

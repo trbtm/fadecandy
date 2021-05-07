@@ -43,6 +43,3 @@
 #define PRODUCT_ID              0x607a    // Assigned to Fadecandy project
 #define DEVICE_VER              0x0200	  // BCD device version
 #define DEVICE_VER_STRING		"2.00"
-
-// Enforce inlining, so we can take advantage of inter-procedural optimization
-#define ALWAYS_INLINE __attribute__ ((always_inline))
