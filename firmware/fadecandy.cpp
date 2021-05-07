@@ -41,14 +41,6 @@ fcLinearLUT fcBuffers::lutCurrent;
 #define DMAMEM __attribute__ ((section(".dmabuffers"), used))
 static DMAMEM uint8_t ledBuffer[2][led::bufferSize(LEDS_PER_STRIP)];
 
-/*
- * Residuals for temporal dithering. Usually 8 bits is enough, but
- * there are edge cases when it isn't, and we don't have the spare CPU cycles
- * to saturate values before storing. So, 16-bit it is.
- */
-typedef int16_t residual_t;
-static residual_t residual[0]; // CHANNELS_TOTAL];
-
 // Reserved RAM area for signalling entry to bootloader
 extern uint32_t boot_token;
 
@@ -66,65 +58,6 @@ extern uint32_t boot_token;
 #undef FCP_INTERPOLATION
 #undef FCP_DITHERING
 #undef FCP_FN
-
-#if 0
-
-#define FCP_INTERPOLATION   1
-#define FCP_DITHERING       0
-#define FCP_FN(name)        name##_I1_D0
-#include "fc_pixel_lut.cpp"
-#include "fc_pixel.cpp"
-#include "fc_draw.cpp"
-#undef FCP_INTERPOLATION
-#undef FCP_DITHERING
-#undef FCP_FN
-
-#define FCP_INTERPOLATION   0
-#define FCP_DITHERING       1
-#define FCP_FN(name)        name##_I0_D1
-#include "fc_pixel_lut.cpp"
-#include "fc_pixel.cpp"
-#include "fc_draw.cpp"
-#undef FCP_INTERPOLATION
-#undef FCP_DITHERING
-#undef FCP_FN
-
-#define FCP_INTERPOLATION   1
-#define FCP_DITHERING       1
-#define FCP_FN(name)        name##_I1_D1
-#include "fc_pixel_lut.cpp"
-#include "fc_pixel.cpp"
-#include "fc_draw.cpp"
-#undef FCP_INTERPOLATION
-#undef FCP_DITHERING
-#undef FCP_FN
-
-#endif
-
-static inline uint32_t calculateInterpCoefficient()
-{
-    /*
-     * Calculate our interpolation coefficient. This is a value between
-     * 0x0000 and 0x10000, representing some point in between fbPrev and fbNext.
-     *
-     * We timestamp each frame at the moment its final packet has been received.
-     * In other words, fbNew has no valid timestamp yet, and fbPrev/fbNext both
-     * have timestamps in the recent past.
-     *
-     * fbNext's timestamp indicates when both fbPrev and fbNext entered their current
-     * position in the keyframe queue. The difference between fbPrev and fbNext indicate
-     * how long the interpolation between those keyframes should take.
-     */
-
-    uint32_t now = millis();
-    uint32_t tsPrev = buffers.fbPrev->timestamp;
-    uint32_t tsNext = buffers.fbNext->timestamp;
-    uint32_t tsDiff = tsNext - tsPrev;
-    uint32_t tsElapsed = now - tsNext;
-
-    // Careful to avoid overflows if the frames stop coming...
-    return (std::min<uint32_t>(tsElapsed, tsDiff) << 16) / tsDiff;
-}
 
 static void dfu_reboot()
 {
@@ -165,27 +98,7 @@ extern "C" int main()
     while (usb_dfu_state == DFU_appIDLE) {
         watchdog_refresh();
 
-        updateDrawBuffer_I0_D0(0x10000, backBuffer);
-/*
-        buffers.flags |= CFLAG_NO_INTERPOLATION | CFLAG_NO_DITHERING;
-
-        // Select a different drawing loop based on our firmware config flags
-        switch (buffers.flags & (CFLAG_NO_INTERPOLATION | CFLAG_NO_DITHERING)) {
-            case 0:
-            default:
-                updateDrawBuffer_I1_D1(calculateInterpCoefficient());
-                break;
-            case CFLAG_NO_INTERPOLATION:
-                updateDrawBuffer_I0_D1(0x10000);
-                break;
-            case CFLAG_NO_DITHERING:
-                updateDrawBuffer_I1_D0(calculateInterpCoefficient());
-                break;
-            case CFLAG_NO_INTERPOLATION | CFLAG_NO_DITHERING:
-                updateDrawBuffer_I0_D0(0x10000);
-                break;
-        }
-*/
+        updateDrawBuffer_I0_D0(backBuffer);
 
         // Start sending the next frame over DMA
         while (!led::ready());

@@ -22,45 +22,17 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-static uint32_t FCP_FN(updatePixel)(uint32_t icPrev, uint32_t icNext,
-    const uint8_t *pixelPrev, const uint8_t *pixelNext, residual_t *pResidual)
+static uint32_t FCP_FN(updatePixel)(const uint8_t *pixelNext)
 {
-    /*
-     * Update pipeline for one pixel:
-     *
-     *    1. Interpolate framebuffer
-     *    2. Interpolate LUT
-     *    3. Dithering
-     *
-     * icPrev in range [0, 0x1010000]
-     * icNext in range [0, 0x1010000]
-     * icPrev + icNext = 0x1010000
-     */
-
-#if FCP_INTERPOLATION
-    // Per-channel linear interpolation and conversion to 16-bit color.
-    // Result range: [0, 0xFFFF] 
-    int iR = (pixelPrev[0] * icPrev + pixelNext[0] * icNext) >> 16;
-    int iG = (pixelPrev[1] * icPrev + pixelNext[1] * icNext) >> 16;
-    int iB = (pixelPrev[2] * icPrev + pixelNext[2] * icNext) >> 16;
-#else
     int iR = pixelNext[0] * 0x101;
     int iG = pixelNext[1] * 0x101;
     int iB = pixelNext[2] * 0x101;
-#endif
 
     // Pass through our color LUT
     // Result range: [0, 0xFFFF] 
     iR = FCP_FN(lutInterpolate)(buffers.lutCurrent.r, iR);
     iG = FCP_FN(lutInterpolate)(buffers.lutCurrent.g, iG);
     iB = FCP_FN(lutInterpolate)(buffers.lutCurrent.b, iB);
-
-#if FCP_DITHERING
-    // Incorporate the residual from last frame
-    iR += pResidual[0];
-    iG += pResidual[1];
-    iB += pResidual[2];
-#endif
 
     /*
      * Round to the nearest 8-bit value. Clamping is necessary!
@@ -76,13 +48,6 @@ static uint32_t FCP_FN(updatePixel)(uint32_t icPrev, uint32_t icNext,
     int r8 = __USAT(iR + 0x80, 16) >> 8;
     int g8 = __USAT(iG + 0x80, 16) >> 8;
     int b8 = __USAT(iB + 0x80, 16) >> 8;
-
-#if FCP_DITHERING
-    // Compute the error, after expanding the 8-bit value back to 16-bit.
-    pResidual[0] = iR - (r8 * 257);
-    pResidual[1] = iG - (g8 * 257);
-    pResidual[2] = iB - (b8 * 257);
-#endif
 
     // Pack the result, in GRB order.
     return (g8 << 16) | (r8 << 8) | b8;

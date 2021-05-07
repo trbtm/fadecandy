@@ -22,43 +22,18 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer)
+static void FCP_FN(updateDrawBuffer)(uint8_t* buffer)
 {
     /*
      * Update the LED draw buffer. In one step, we do the interpolation,
      * gamma correction, dithering, and we convert packed-pixel data to the
      * planar format used for OctoWS2811 DMAs.
-     *
-     * "interpCoefficient" indicates how far between fbPrev and fbNext
-     * we are. It is a fixed point value in the range [0x0000, 0x10000],
-     * corresponding to 100% fbPrev and 100% fbNext, respectively.
      */
 
     // For each pixel, this is a 24-byte stream of bits (6 words)
     uint32_t *out = (uint32_t*) buffer;
 
-    /*
-     * Interpolation coefficients, including a multiply by 257 to convert 8-bit color to 16-bit color.
-     * You'd think that it would save clock cycles to calculate icPrev in updatePixel(), but this doesn't
-     * seem to be the case.
-     *
-     * icPrev in range [0, 0x1010000]
-     * icNext in range [0, 0x1010000]
-     * icPrev + icNext = 0x1010000
-     */
-
-    uint32_t icPrev = 257 * (0x10000 - interpCoefficient);
-    uint32_t icNext = 257 * interpCoefficient;
-
-    /*
-     * Pointer to the residual buffer for this pixel. Calculating this here rather than in updatePixel
-     * saves a lot of clock cycles, since otherwise updatePixel() immediately needs to do a load from
-     * constant pool and some multiplication.
-     */
-
-    residual_t *pResidual = residual;
-
-    for (int i = 0; i < LEDS_PER_STRIP; ++i, pResidual += 3) {
+    for (int i = 0; i < LEDS_PER_STRIP; ++i) {
 
         // Six output words
         union {
@@ -77,10 +52,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer
          * This generates compact and efficient code using the BFI instruction.
          */
 
-        uint32_t p0 = FCP_FN(updatePixel)(icPrev, icNext,
-            buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 0),
-            buffers.fbNext->pixel(i + LEDS_PER_STRIP * 0),
-            pResidual + LEDS_PER_STRIP * 3 * 0);
+        uint32_t p0 = FCP_FN(updatePixel)(buffers.fbNext->pixel(i + LEDS_PER_STRIP * 0));
 
         o5.p0d = p0;
         o5.p0c = p0 >> 1;
@@ -108,10 +80,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer
         o0.p0a = p0 >> 23;
 
 #if LED_STRIPS >= 2
-        uint32_t p1 = FCP_FN(updatePixel)(icPrev, icNext,
-            buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 1),
-            buffers.fbNext->pixel(i + LEDS_PER_STRIP * 1),
-            pResidual + LEDS_PER_STRIP * 3 * 1);
+        uint32_t p1 = FCP_FN(updatePixel)(buffers.fbNext->pixel(i + LEDS_PER_STRIP * 1));
 
         o5.p1d = p1;
         o5.p1c = p1 >> 1;
@@ -140,10 +109,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer
 #endif
 
 #if LED_STRIPS >= 3
-        uint32_t p2 = FCP_FN(updatePixel)(icPrev, icNext,
-            buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 2),
-            buffers.fbNext->pixel(i + LEDS_PER_STRIP * 2),
-            pResidual + LEDS_PER_STRIP * 3 * 2);
+        uint32_t p2 = FCP_FN(updatePixel)(buffers.fbNext->pixel(i + LEDS_PER_STRIP * 2));
 
         o5.p2d = p2;
         o5.p2c = p2 >> 1;
@@ -172,10 +138,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer
 #endif
 
 #if LED_STRIPS >= 4
-        uint32_t p3 = FCP_FN(updatePixel)(icPrev, icNext,
-            buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 3),
-            buffers.fbNext->pixel(i + LEDS_PER_STRIP * 3),
-            pResidual + LEDS_PER_STRIP * 3 * 3);
+        uint32_t p3 = FCP_FN(updatePixel)(buffers.fbNext->pixel(i + LEDS_PER_STRIP * 3));
 
         o5.p3d = p3;
         o5.p3c = p3 >> 1;
@@ -204,10 +167,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer
 #endif
 
 #if LED_STRIPS >= 5
-        uint32_t p4 = FCP_FN(updatePixel)(icPrev, icNext,
-            buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 4),
-            buffers.fbNext->pixel(i + LEDS_PER_STRIP * 4),
-            pResidual + LEDS_PER_STRIP * 3 * 4);
+        uint32_t p4 = FCP_FN(updatePixel)(buffers.fbNext->pixel(i + LEDS_PER_STRIP * 4));
 
         o5.p4d = p4;
         o5.p4c = p4 >> 1;
@@ -236,10 +196,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer
 #endif
 
 #if LED_STRIPS >= 6
-        uint32_t p5 = FCP_FN(updatePixel)(icPrev, icNext,
-            buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 5),
-            buffers.fbNext->pixel(i + LEDS_PER_STRIP * 5),
-            pResidual + LEDS_PER_STRIP * 3 * 5);
+        uint32_t p5 = FCP_FN(updatePixel)(buffers.fbNext->pixel(i + LEDS_PER_STRIP * 5));
 
         o5.p5d = p5;
         o5.p5c = p5 >> 1;
@@ -268,10 +225,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer
 #endif
 
 #if LED_STRIPS >= 7
-        uint32_t p6 = FCP_FN(updatePixel)(icPrev, icNext,
-            buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 6),
-            buffers.fbNext->pixel(i + LEDS_PER_STRIP * 6),
-            pResidual + LEDS_PER_STRIP * 3 * 6);
+        uint32_t p6 = FCP_FN(updatePixel)(buffers.fbNext->pixel(i + LEDS_PER_STRIP * 6));
 
         o5.p6d = p6;
         o5.p6c = p6 >> 1;
@@ -300,10 +254,7 @@ static void FCP_FN(updateDrawBuffer)(unsigned interpCoefficient, uint8_t* buffer
 #endif
 
 #if LED_STRIPS >= 8
-        uint32_t p7 = FCP_FN(updatePixel)(icPrev, icNext,
-            buffers.fbPrev->pixel(i + LEDS_PER_STRIP * 7),
-            buffers.fbNext->pixel(i + LEDS_PER_STRIP * 7),
-            pResidual + LEDS_PER_STRIP * 3 * 7);
+        uint32_t p7 = FCP_FN(updatePixel)(buffers.fbNext->pixel(i + LEDS_PER_STRIP * 7));
 
         o5.p7d = p7;
         o5.p7c = p7 >> 1;
