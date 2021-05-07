@@ -44,21 +44,6 @@ static DMAMEM uint8_t ledBuffer[2][led::bufferSize(LEDS_PER_STRIP)];
 // Reserved RAM area for signalling entry to bootloader
 extern uint32_t boot_token;
 
-/*
- * Low-level drawing code, which we want to compile in the same unit as the main loop.
- * We compile this multiple times, with different config flags.
- */
-
-#define FCP_INTERPOLATION   0
-#define FCP_DITHERING       0
-#define FCP_FN(name)        name##_I0_D0
-#include "fc_pixel_lut.cpp"
-#include "fc_pixel.cpp"
-#include "fc_draw.cpp"
-#undef FCP_INTERPOLATION
-#undef FCP_DITHERING
-#undef FCP_FN
-
 static void dfu_reboot()
 {
     // Reboot to the Fadecandy Bootloader
@@ -98,7 +83,13 @@ extern "C" int main()
     while (usb_dfu_state == DFU_appIDLE) {
         watchdog_refresh();
 
-        updateDrawBuffer_I0_D0(backBuffer);
+        uint8_t* buffer = backBuffer;
+        for (int i = 0; i < LEDS_PER_STRIP; ++i) {
+            led::pushPixels<LED_STRIPS>(&buffer, [i](auto strip) [[gnu::always_inline]] {
+                const uint8_t* color = buffers.fbNext->pixel(i + LEDS_PER_STRIP * strip);
+                return (color[1] << 16) | (color[0] << 8) | color[2]; // GRB order
+            });
+        }
 
         // Start sending the next frame over DMA
         while (!led::ready());
