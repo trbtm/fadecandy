@@ -23,7 +23,7 @@ APP_HEX = app-image.hex
 
 # Sources
 C_FILES = \
-	startup.c \
+	hw/startup.c \
 	hw/pins_teensy.c \
 	hw/usb_desc.c \
 	hw/usb_dev.c \
