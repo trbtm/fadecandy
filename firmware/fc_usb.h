@@ -76,21 +76,6 @@ struct fcFramebuffer : public fcPacketBuffer<PACKETS_PER_FRAME>
     }
 };
 
-
-/*
- * Color Lookup table
- */
-
-struct fcColorLUT : public fcPacketBuffer<PACKETS_PER_LUT>
-{
-    ALWAYS_INLINE const unsigned entry(unsigned index)
-    {
-        const uint8_t *p = &packets[index / LUTENTRIES_PER_PACKET]->buf[2 + (index % LUTENTRIES_PER_PACKET) * 2];
-        return *(uint16_t*)p;
-    }
-};
-
-
 /*
  * Configuration flag values
  */
@@ -99,20 +84,6 @@ struct fcColorLUT : public fcPacketBuffer<PACKETS_PER_LUT>
 #define CFLAG_NO_INTERPOLATION  (1 << 1)
 #define CFLAG_NO_ACTIVITY_LED   (1 << 2)
 #define CFLAG_LED_CONTROL       (1 << 3)
-
-/*
- * Data type for current color LUT
- */
-
-union fcLinearLUT
-{
-    uint16_t entries[LUT_TOTAL_SIZE];
-    struct {
-        uint16_t r[LUT_CH_SIZE];
-        uint16_t g[LUT_CH_SIZE];
-        uint16_t b[LUT_CH_SIZE];
-    };
-};
 
 /*
  * All USB-writable buffers
@@ -125,9 +96,6 @@ struct fcBuffers
     fcFramebuffer *fbNew;       // Partial frame, getting ready to become fbNext
 
     fcFramebuffer fb[2];        // Triple-buffered video frames
-
-    fcColorLUT lutNew;                // Partial LUT, not yet finalized
-    static fcLinearLUT lutCurrent;    // Active LUT, linearized for efficiency
 
     uint8_t flags;              // Configuration flags
 
@@ -146,10 +114,8 @@ struct fcBuffers
 
 private:
     void finalizeFramebuffer(bool doubleBuffer);
-    void finalizeLUT();
 
     // Status communicated between handleUSB() and finalizeFrame()
     bool handledAnyPacketsThisFrame;
     bool pendingFinalizeFrame;
-    bool pendingFinalizeLUT;
 };

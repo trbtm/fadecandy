@@ -35,7 +35,6 @@
 
 // USB data buffers
 static fcBuffers buffers;
-fcLinearLUT fcBuffers::lutCurrent;
 
 // Double-buffered DMA memory for raw bit planes of output
 #define DMAMEM __attribute__ ((section(".dmabuffers"), used))

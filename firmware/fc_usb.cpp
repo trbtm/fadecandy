@@ -32,7 +32,7 @@
 #define FINAL_BIT           0x20
 
 #define TYPE_FRAMEBUFFER    0x00
-#define TYPE_LUT            0x40
+//#define TYPE_LUT            0x40
 #define TYPE_CONFIG         0x80
 
 
@@ -54,11 +54,6 @@ void fcBuffers::finalizeFrame(bool doubleBuffer)
     if (pendingFinalizeFrame) {
         finalizeFramebuffer(doubleBuffer);
         pendingFinalizeFrame = false;
-    }
-
-    if (pendingFinalizeLUT) {
-        finalizeLUT();
-        pendingFinalizeLUT = false;
     }
 
     // Let the USB driver know we may be able to process buffers that were previously deferred
@@ -85,16 +80,6 @@ bool fcBuffers::handleUSB(usb_packet_t *packet)
             fbNew->store(packet->buf[1], packet);
             if (final) {
                 pendingFinalizeFrame = true;
-            }
-            break;
-
-        case TYPE_LUT:
-            // LUT accesses are not synchronized
-            lutNew.store(packet->buf[1], packet);
-
-            if (final) {
-                // Finalize the LUT on the main thread, it's less async than doing it in the ISR.
-                pendingFinalizeLUT = true;
             }
             break;
 
@@ -129,20 +114,5 @@ void fcBuffers::finalizeFramebuffer(bool doubleBuffer)
         fbPrev = fbNew;
         fbNext = fbNew;
         fbNew = recycle;
-    }
-}
-
-void fcBuffers::finalizeLUT()
-{
-    /*
-     * To keep LUT lookups super-fast, we copy the LUT into a linear array at this point.
-     * LUT changes are intended to be infrequent (initialization or configuration-time only),
-     * so this isn't a performance bottleneck.
-     *
-     * Note the right shift by 1. See lutInterpolate() for an explanation.
-     */
-
-    for (unsigned i = 0; i < LUT_TOTAL_SIZE; ++i) {
-        lutCurrent.entries[i] = lutNew.entry(i) >> 1;
     }
 }

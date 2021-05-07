@@ -32,18 +32,12 @@
 #define LEDS_TOTAL              (LEDS_PER_STRIP * LED_STRIPS)
 #define CHANNELS_TOTAL          (LEDS_TOTAL * 3)
 
-#define LUT_CH_SIZE             257
-#define LUT_TOTAL_SIZE          (LUT_CH_SIZE * 3)
-
 // USB packet layout
 #define PIXELS_PER_PACKET       20
-#define LUTENTRIES_PER_PACKET   31
 #define PACKETS_PER_FRAME       ((LEDS_TOTAL + PIXELS_PER_PACKET - 1) / PIXELS_PER_PACKET)
-#define PACKETS_PER_LUT         ((LUT_TOTAL_SIZE + LUTENTRIES_PER_PACKET - 1) / LUTENTRIES_PER_PACKET)
 
-// Three full frames, one LUT buffer, a little extra (4)
-//#define NUM_USB_BUFFERS         ((3 * PACKETS_PER_FRAME) + (PACKETS_PER_LUT) + 4)
-#define NUM_USB_BUFFERS         ((2 * PACKETS_PER_FRAME) + (PACKETS_PER_LUT) + 4)
+// Two frames plus a little extra for packets in flight (4)
+#define NUM_USB_BUFFERS         ((2 * PACKETS_PER_FRAME) + 4)
 
 #define VENDOR_ID               0x1d50    // OpenMoko
 #define PRODUCT_ID              0x607a    // Assigned to Fadecandy project
