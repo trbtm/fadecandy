@@ -33,12 +33,18 @@
 #include "hw/core_pins.h"
 
 namespace led {
-// LED strip reset interval in microseconds.
-constexpr uint32_t SK6812_RESET_INTERVAL = 80;
 
-// LED strip frequency.
-constexpr uint32_t SK6812_FREQUENCY = 800000;
+struct Timings {
+    // LED strip frequency in Hz.
+    uint32_t frequency;
+    // Reset interval in microseconds.
+    uint32_t resetInterval;
+    // On-time percentage for 0s and 1s, as a fraction of 255.
+    uint32_t t0h, t1h;
+};
 
+// OctoWS2811 defaults.
+//
 // Waveform timing: these set the high time for a 0 and 1 bit, as a fraction of
 // the total 800 kHz or 400 kHz clock cycle.  The scale is 0 to 255.  The Worldsemi
 // datasheet seems T1H should be 600 ns of a 1250 ns cycle, or 48%.  That may
@@ -54,10 +60,31 @@ constexpr uint32_t SK6812_FREQUENCY = 800000;
 // have an insight about tuning these parameters AND you have actually tested on
 // real LED strips, please contact paul@pjrc.com.  Please do not email based only
 // on reading the datasheets and purely theoretical analysis.
+constexpr Timings octo { 800000, 300, 60, 176 };
+
+// SK6812 seems more stable with these timings (less random flashing) but it
+// seems to depend on how the board is initialized.  There might be some
+// non-determinism involved in the DMA timings across boots.
 //
-// TODO: Measure this more precisely for SK6812.
-constexpr uint32_t WS2811_TIMING_T0H = 60;
-constexpr uint32_t WS2811_TIMING_T1H = 176;
+// Data sheet suggestions:
+// The data transmission time (TH+TL=1.25µs±600ns):
+//     T0H 0 code, high level time 0.3µs ±0.15µs
+//     T1H 1 code, high level time 0.6µs ±0.15µs
+//     T0L 0 code, low level time 0.9µs ±0.15µs
+//     T1L 1 code, low level time 0.6µs ±0.15µs
+//     Trst Reset code，low level time 80µs
+constexpr Timings normal { 800000, 300, 56, 172 };
+
+// Experimental!
+// constexpr Timings aggressive { 900000, 300, 44, 150 }; // good
+// constexpr Timings aggressive { 1000000, 300, 44, 150 }; // still good
+// constexpr Timings aggressive { 1000000, 300, 40, 140 }; // still good!
+// constexpr Timings aggressive { 1100000, 300, 40, 140 }; // too fast, flickers, dropouts
+// constexpr Timings aggressive { 1000000, 60, 40, 140 }; // still good!
+// constexpr Timings aggressive { 1000000, 50, 40, 140 }; // bad, flickers, reset too short
+constexpr Timings aggressive { 1000000, 80, 40, 140 }; // still good! safe
+
+constexpr Timings timings = aggressive;
 
 const uint8_t ONES = 0xFF;
 
@@ -69,20 +96,20 @@ void init(size_t ledsPerStrip) {
 
     // configure the 8 output pins
     GPIOD_PCOR = 0xFF;
-    pinMode(2, OUTPUT); // strip #1
+    pinMode(2, OUTPUT);     // strip #1
     pinMode(14, OUTPUT);    // strip #2
-    pinMode(7, OUTPUT); // strip #3
-    pinMode(8, OUTPUT); // strip #4
-    pinMode(6, OUTPUT); // strip #5
+    pinMode(7, OUTPUT);     // strip #3
+    pinMode(8, OUTPUT);     // strip #4
+    pinMode(6, OUTPUT);     // strip #5
     pinMode(20, OUTPUT);    // strip #6
     pinMode(21, OUTPUT);    // strip #7
-    pinMode(5, OUTPUT); // strip #8
+    pinMode(5, OUTPUT);     // strip #8
 
     // create the two waveforms for WS2811 low and high bits
-    analogWriteFrequency(3, SK6812_FREQUENCY);
-    analogWriteFrequency(4, SK6812_FREQUENCY);
-    analogWrite(3, WS2811_TIMING_T0H);
-    analogWrite(4, WS2811_TIMING_T1H);
+    analogWriteFrequency(3, timings.frequency);
+    analogWriteFrequency(4, timings.frequency);
+    analogWrite(3, timings.t0h);
+    analogWrite(4, timings.t1h);
 
     // pin 16 triggers DMA(port B) on rising edge (configure for pin 3's waveform)
     CORE_PIN16_CONFIG = PORT_PCR_IRQC(1) | PORT_PCR_MUX(3);
@@ -164,7 +191,7 @@ void write(const uint8_t* buffer) {
         // for some weird reason, the compiler may optimize this code in a way that exits
         // exit early unless we rule out now <= writeFinishedAt even though I verified that
         // the clock is monotonic
-    } while (now <= writeFinishedAt || now - writeFinishedAt < SK6812_RESET_INTERVAL);
+    } while (now <= writeFinishedAt || now - writeFinishedAt < timings.resetInterval);
 
     DMA_TCD2_SADDR = buffer;
 
