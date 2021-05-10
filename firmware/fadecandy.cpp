@@ -214,6 +214,8 @@ extern "C" int usb_rx_handler(usb_packet_t *packet) {
 extern uint32_t boot_token;
 
 extern "C" int main() {
+    initSysticks();
+
     // Run application until asked to reboot into the bootloader
     app::setup();
     while (usb_dfu_state == DFU_appIDLE) {
@@ -225,8 +227,8 @@ extern "C" int main() {
     boot_token = 0x74624346;
 
     // Short delay to allow the host to receive the response to DFU_DETACH.
-    uint32_t deadline = millis() + 10;
-    while (millis() < deadline) {
+    uint64_t deadline = millis64() + 10;
+    while (millis64() < deadline) {
         watchdog_refresh();
     }
 

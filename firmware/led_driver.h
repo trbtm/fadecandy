@@ -1,8 +1,5 @@
 /*
  * Simplified LED driver for SK6812 pixels based on OctoWS2811.
- *
- * Clients are responsible for managing buffers and waiting for the LEDs
- * to be ready to receive new data.
  */
 
 /*  OctoWS2811 - High Performance WS2811 LED Display Library
@@ -30,6 +27,8 @@
     THE SOFTWARE.
 */
 
+#pragma once
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
@@ -42,17 +41,9 @@ constexpr size_t bufferSize(size_t ledsPerStrip) { return ledsPerStrip * 24; }
 // Initialize the GPIOs and DMA for LED output.
 void init(size_t ledsPerStrip);
 
-// Returns true if all prior writes have finished and the LEDs are ready to receive
-// new data taking into account the LED protocol's timing requirements.
-bool ready();
-
-// Returns true if all prior writes have finished.
-bool writeFinished();
-
 // Writes a buffer of encoded LED data to the DMA engine.
-// This operation completes asynchronously: the client must not modify the contents of
-// the buffer again until |writeFinished()| returns true.
-// Assumes the LEDs are ready to receive more data.
+// This operation completes asynchronously. Subsequent writes will block
+// until all prior writes have completed.
 void write(const uint8_t* buffer);
 
 // Pushes data into a DMA buffer for one pixel from each of up to 8 strips.

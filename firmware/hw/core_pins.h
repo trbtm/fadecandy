@@ -697,38 +697,6 @@ void _init_Teensyduino_internal_(void);
 
 void _restart_Teensyduino_(void) __attribute__((noreturn));
 
-void delay(uint32_t msec);
-
-extern volatile uint32_t systick_millis_count;
-
-static inline uint32_t millis(void) __attribute__((always_inline, unused));
-static inline uint32_t millis(void)
-{
-    volatile uint32_t ret = systick_millis_count; // single aligned 32 bit is atomic;
-    return ret;
-}
-
-uint32_t micros(void);
-
-static inline void delayMicroseconds(uint32_t) __attribute__((always_inline, unused));
-static inline void delayMicroseconds(uint32_t usec)
-{
-#if F_CPU == 96000000
-    uint32_t n = usec << 5;
-#elif F_CPU == 48000000
-    uint32_t n = usec << 4;
-#elif F_CPU == 24000000
-    uint32_t n = usec << 3;
-#endif
-    if (usec == 0) return;
-    asm volatile(
-        "L_%=_delayMicroseconds:"       "\n\t"
-        "subs   %0, #1"             "\n\t"
-        "bne    L_%=_delayMicroseconds"     "\n"
-        : "+r" (n) :
-    );
-}
-
 #ifdef __cplusplus
 }
 #endif

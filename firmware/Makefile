@@ -31,8 +31,9 @@ C_FILES = \
 	hw/serial1.c
 
 CPP_FILES = \
+	fadecandy.cpp \
 	led_driver.cpp \
-	fadecandy.cpp
+	time.cpp
 
 # Headers
 INCLUDES = -I.

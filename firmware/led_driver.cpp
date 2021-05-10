@@ -1,8 +1,5 @@
 /*
  * Simplified LED driver for SK6812 pixels based on OctoWS2811.
- *
- * Clients are responsible for managing buffers and waiting for the LEDs
- * to be ready to receive new data.
  */
 
 /*  OctoWS2811 - High Performance WS2811 LED Display Library
@@ -32,6 +29,7 @@
 
 #include "led_driver.h"
 
+#include "time.h"
 #include "hw/core_pins.h"
 
 namespace led {
@@ -64,7 +62,7 @@ constexpr uint32_t WS2811_TIMING_T1H = 176;
 const uint8_t ONES = 0xFF;
 
 volatile bool writeInProgress = false;
-uint32_t writeFinishedAt = 0;
+volatile uint64_t writeFinishedAt = 0;
 
 void init(size_t ledsPerStrip) {
     const size_t bufsize = bufferSize(ledsPerStrip);
@@ -153,22 +151,21 @@ void init(size_t ledsPerStrip) {
     // enable a done interrupts when channel #3 completes
     NVIC_ENABLE_IRQ(IRQ_DMA_CH3);
     //pinMode(1, OUTPUT); // testing: oscilloscope trigger
-
-    // Ensure that the reset interval is respected even on the first frame.
-    writeFinishedAt = micros();
-    writeInProgress = false;
-}
-
-bool ready() {
-    return !writeInProgress &&
-            micros() - writeFinishedAt >= SK6812_RESET_INTERVAL;
-}
-
-bool writeFinished() {
-    return !writeInProgress;
 }
 
 void write(const uint8_t* buffer) {
+    // wait for any prior DMA operation
+    while (writeInProgress);
+
+    // wait for LED reset
+    uint64_t now;
+    do {
+        now = micros64();
+        // for some weird reason, the compiler may optimize this code in a way that exits
+        // exit early unless we rule out now <= writeFinishedAt even though I verified that
+        // the clock is monotonic
+    } while (now <= writeFinishedAt || now - writeFinishedAt < SK6812_RESET_INTERVAL);
+
     DMA_TCD2_SADDR = buffer;
 
     // ok to start, but we must be very careful to begin
@@ -204,6 +201,6 @@ void write(const uint8_t* buffer) {
 
 extern "C" void dma_ch3_isr() {
     DMA_CINT = 3;
-    led::writeFinishedAt = micros();
+    led::writeFinishedAt = micros64();
     led::writeInProgress = false;
 }

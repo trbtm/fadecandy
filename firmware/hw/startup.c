@@ -65,12 +65,6 @@ void unused_isr(void)
         while (1); // die
 }
 
-extern volatile uint32_t systick_millis_count;
-void systick_default_isr(void)
-{
-    systick_millis_count++;
-}
-
 void nmi_isr(void)      __attribute__ ((weak, alias("unused_isr")));
 void hard_fault_isr(void)   __attribute__ ((weak, alias("unused_isr")));
 void memmanage_fault_isr(void)  __attribute__ ((weak, alias("unused_isr")));
@@ -79,7 +73,7 @@ void usage_fault_isr(void)  __attribute__ ((weak, alias("unused_isr")));
 void svcall_isr(void)       __attribute__ ((weak, alias("unused_isr")));
 void debugmonitor_isr(void) __attribute__ ((weak, alias("unused_isr")));
 void pendablesrvreq_isr(void)   __attribute__ ((weak, alias("unused_isr")));
-void systick_isr(void)      __attribute__ ((weak, alias("systick_default_isr")));
+void systick_isr(void)      __attribute__ ((weak, alias("unused_isr")));
 
 void dma_ch0_isr(void)      __attribute__ ((weak, alias("unused_isr")));
 void dma_ch1_isr(void)      __attribute__ ((weak, alias("unused_isr")));
@@ -235,10 +229,6 @@ void ResetHandler(void)
     while (dest < &_edata) *dest++ = *src++;
     dest = &_sbss;
     while (dest < &_ebss) *dest++ = 0;
-
-    // initialize the SysTick counter
-    SYST_RVR = (F_CPU / 1000) - 1;
-    SYST_CSR = SYST_CSR_CLKSOURCE | SYST_CSR_TICKINT | SYST_CSR_ENABLE;
 
     // Use FlexRAM as normal RAM, and zero it
     ftfl_set_flexram_function(0xFF);
