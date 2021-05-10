@@ -29,6 +29,7 @@
 
 #include "config.h"
 #include "arm/arm_math.h"
+#include "debug.h"
 #include "hw/HardwareSerial.h"
 #include "hw/pins_arduino.h"
 #include "hw/core_pins.h"
@@ -235,5 +236,5 @@ extern "C" int main() {
     // Detach from USB, and use the watchdog to time out a 10ms USB disconnect.
     __disable_irq();
     USB0_CONTROL = 0;
-    while (1);
+    crash("DFU entry");
 }

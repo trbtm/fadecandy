@@ -35,6 +35,7 @@
 #include "usb_mem.h"
 
 #include "config.h"
+#include "debug.h"
 #include "mk20dx128.h"
 
 __attribute__ ((section(".usbbuffers"), used))
@@ -75,7 +76,7 @@ usb_packet_t * usb_malloc(void)
         // Oops, no more memory. This is a fatal error- our firmware should be designed
         // to never allocate more buffers than we have. Wedge ourselves in an infinite
         // loop and the watchdog will reset.
-        while (1);
+        crash("usb OOM");
     }
 
     usb_buffer_available[idx] = avail & ~(0x80000000 >> (n & 31));
@@ -91,11 +92,18 @@ void usb_free(usb_packet_t *p)
     unsigned int n, mask, idx;
 
     n = ((uint8_t *)p - usb_buffer_memory) / sizeof(usb_packet_t);
-    if (n >= NUM_USB_BUFFERS) return;
+    if (n >= NUM_USB_BUFFERS) {
+        // Invalid pointer.  Wait for watchdog reset.
+        crash("usb bad free");
+    }
 
     idx = n >> 5;
     mask = 0x80000000 >> (n & 31);
     __disable_irq();
+    if (usb_buffer_available[idx] & mask) {
+        // Already free!
+        crash("usb double free");
+    }
     usb_buffer_available[idx] |= mask;
     __enable_irq();
 }

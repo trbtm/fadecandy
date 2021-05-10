@@ -287,3 +287,31 @@ void serial_phex32(uint32_t n)
 	serial_phex(n);
 }
 
+void serial_pdec32(uint32_t n)
+{
+	uint32_t divisor = 1000000000;
+	for (int i = 0; i < 10; ++i) {
+		unsigned digit = n / divisor;
+		serial_putchar('0' + digit);
+		n -= digit * divisor;
+		divisor /= 10;
+	}
+}
+
+// Write directly to the UART, system is probably about to crash
+void serial_urgent(const char* p) {
+    if (!(SIM_SCGC4 & SIM_SCGC4_UART0)) return;
+
+	__disable_irq();
+	uint8_t c = UART0_C2;
+
+	UART0_C2 = C2_TX_ACTIVE;
+	while (*p) {
+		while (!(UART0_S1 & UART_S1_TDRE));
+		(void)UART0_S1;
+		UART0_D = *p++;
+	}
+
+	UART0_C2 = c;
+	__enable_irq();
+}

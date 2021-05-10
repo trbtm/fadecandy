@@ -55,6 +55,8 @@ void serial_print(const char *p);
 void serial_phex(uint32_t n);
 void serial_phex16(uint32_t n);
 void serial_phex32(uint32_t n);
+void serial_pdec32(uint32_t n);
+void serial_urgent(const char* p);
 
 #ifdef __cplusplus
 }

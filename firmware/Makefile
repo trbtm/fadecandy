@@ -31,6 +31,7 @@ C_FILES = \
 	hw/serial1.c
 
 CPP_FILES = \
+	debug.cpp \
 	fadecandy.cpp \
 	led_driver.cpp \
 	time.cpp
@@ -88,7 +89,7 @@ clean:
 	rm -f $(OBJS) $(OBJS:.o=.d) $(TARGET).elf $(TARGET).dfu $(APP_HEX)
 
 disassemble: $(TARGET).elf
-	$(OBJDUMP) -d $< | less
+	$(OBJDUMP) -d -C -S $< | less
 
 symbols: $(TARGET).elf
 	$(OBJDUMP) -t $< | sort | less

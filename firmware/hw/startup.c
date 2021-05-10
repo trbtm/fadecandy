@@ -36,6 +36,8 @@
 
 #include "hw/mk20dx128.h"
 
+#include "debug.h"
+
 typedef void (*initFunc_t)(void);
 
 extern unsigned long _stext;
@@ -57,12 +59,12 @@ void _init_Teensyduino_internal_(void);
 
 void fault_isr(void)
 {
-        while (1); // die
+    crash("fault isr");
 }
 
 void unused_isr(void)
 {
-        while (1); // die
+    crash("unused isr");
 }
 
 void nmi_isr(void)      __attribute__ ((weak, alias("unused_isr")));
@@ -243,6 +245,6 @@ void ResetHandler(void)
         p[0]();
 
     main();
-    while (1) ;
+    crash("main exited");
 }
 
