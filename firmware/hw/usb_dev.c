@@ -171,14 +171,13 @@ static void usb_setup(void)
         reg = &USB0_ENDPT1;
         cfg = usb_endpoint_config_table;
         // clear all BDT entries, free any allocated memory...
-        // ZZZ: This condition looks wrong, should be < (NUM_ENDPOINTS + 1) * 4
-        for (i=4; i <= NUM_ENDPOINTS*4; i++) {
-            if (table[i].desc & BDT_OWN) {
-                usb_free((usb_packet_t *)((uint8_t *)(table[i].addr) - 8));
+        for (i = 0; i < NUM_ENDPOINTS * 4; i++) {
+            if (table[i + 4].desc & BDT_OWN) {
+                usb_free(buf2packet(table[i + 4].addr));
             }
         }
 
-        for (i=1; i <= NUM_ENDPOINTS; i++) {
+        for (i = 1; i <= NUM_ENDPOINTS; i++) {
             epconf = *cfg++;
             *reg = epconf;
             reg += 4;
@@ -570,7 +569,7 @@ void usb_init(void)
     usb_init_mem();
     usb_init_serialnumber();
 
-    for (i=0; i <= NUM_ENDPOINTS*4; i++) {
+    for (i = 0; i < (NUM_ENDPOINTS + 1) * 4; i++) {
         table[i].desc = 0;
         table[i].addr = 0;
     }

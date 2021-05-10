@@ -47,7 +47,7 @@ void usb_init_mem()
 {
     unsigned int idx = 0;
     do {
-        usb_buffer_available[idx++] = -1;
+        usb_buffer_available[idx++] = 0xffffffff;
     } while (idx < sizeof(usb_buffer_available) / sizeof(usb_buffer_available[0]));
 }
 
