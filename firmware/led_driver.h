@@ -33,9 +33,11 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <utility>
+
 namespace led {
 
-// Computes the size of buffer required for a set of 8 LED strips of given length.
+// Computes the size of buffer required to write up to 8 strips of given length in parallel.
 constexpr size_t bufferSize(size_t ledsPerStrip) { return ledsPerStrip * 24; }
 
 // Initialize the GPIOs and DMA for LED output.
@@ -46,32 +48,37 @@ void init(size_t ledsPerStrip);
 // until all prior writes have completed.
 void write(const uint8_t* buffer);
 
-// Pushes data into a DMA buffer for one pixel from each of up to 8 strips.
-// |N| is the number of strips.
-// |Sampler| is a lambda function to retrieve a pixel from each strip
-//      signature: size_t Sampler(unsigned n)
-template <size_t N, typename Sampler>
-inline void pushPixels(uint8_t** buffer, Sampler sampler) {
-    uint32_t o0, o1, o2, o3, o4, o5;
+template <size_t ledStrips>
+void pushPixels(uint32_t*& out, const uint32_t pixels[ledStrips]) {
+    uint32_t o0 = 0, o1 = 0, o2 = 0, o3 = 0, o4 = 0, o5 = 0;
 
     // Use the BFI (bit field insert) instruction to efficiently remap bits for DMA.
     // It seems that we can't rely on newer versions of GCC (e.g. 10.2.1) to optimize bit-field
     // expressions using BFI and prefers instead to emit sequences of ANDs and ORs so we need
     // to use assembly to get the desired instructions.
-    #define LED_BFI(R, V, B, W) asm ("bfi %0, %1, %2, %3" : "+r" (R) : "r" (V), "M" (B), "M" (W))
-    #define LED_LSR_BFI4(X, R, B) \
-        if constexpr (X == 0) R = p >> (B + 3); else LED_BFI(R, p >> (B + 3), X, 1); \
-        LED_BFI(R, p >> (B + 2), 8 + X, 1); \
-        LED_BFI(R, p >> (B + 1), 16 + X, 1); \
-        LED_BFI(R, p >> B, 24 + X, 1);
-    #define LED_SWIZZLE(X) if constexpr (X < N) { \
-        uint32_t p = sampler(X); \
-        LED_LSR_BFI4(X, o5, 0); \
-        LED_LSR_BFI4(X, o4, 4); \
-        LED_LSR_BFI4(X, o3, 8); \
-        LED_LSR_BFI4(X, o2, 12); \
-        LED_LSR_BFI4(X, o1, 16); \
-        LED_LSR_BFI4(X, o0, 20); \
+#if 1
+    #define LED_LSR_BFI(R, P, RS, PS) \
+        asm ("bfi %0, %1, %2, #1" : "+r" (R) : "r" (P >> (PS)), "M" (RS))
+#else
+    #define LED_LSR_BFI(R, P, RS, PS) \
+        if constexpr (PS == 0) \
+            asm ("bfi %0, %1, %2, #1" : "+r" (R) : "r" (P), "M" (RS)); \
+        else \
+            asm ("lsr ip, %1, %3; bfi %0, ip, %2, #1" : "+r" (R) : "r" (P), "M" (RS), "M" (PS))
+#endif
+    #define LED_LSR_BFI4(R, P, RS, PS) \
+        LED_LSR_BFI(R, P, RS, PS + 3); \
+        LED_LSR_BFI(R, P, RS + 8, PS + 2); \
+        LED_LSR_BFI(R, P, RS + 16, PS + 1); \
+        LED_LSR_BFI(R, P, RS + 24, PS);
+    #define LED_SWIZZLE(C) if constexpr (C < ledStrips) { \
+        uint32_t p = pixels[C]; \
+        LED_LSR_BFI4(o5, p, C, 0); \
+        LED_LSR_BFI4(o4, p, C, 4); \
+        LED_LSR_BFI4(o3, p, C, 8); \
+        LED_LSR_BFI4(o2, p, C, 12); \
+        LED_LSR_BFI4(o1, p, C, 16); \
+        LED_LSR_BFI4(o0, p, C, 20); \
     }
     LED_SWIZZLE(0)
     LED_SWIZZLE(1)
@@ -85,7 +92,6 @@ inline void pushPixels(uint8_t** buffer, Sampler sampler) {
     #undef LED_LSR_BFI4
     #undef LED_BFI
 
-    uint32_t*& out = *reinterpret_cast<uint32_t**>(buffer);
     *(out++) = o0;
     *(out++) = o1;
     *(out++) = o2;
@@ -93,4 +99,43 @@ inline void pushPixels(uint8_t** buffer, Sampler sampler) {
     *(out++) = o4;
     *(out++) = o5;
 }
+
+// Fills a DMA buffer where the number of strips is determined at compile time.
+// |Sampler| is a lambda function to generate the pixels to output
+//      signature: uint32_t Sampler(size_t strip, size_t pixel)
+template <size_t ledStrips, typename Sampler>
+void updateBuffer(uint8_t* buffer, size_t ledsPerStrip, Sampler sampler) {
+    uint32_t* out = reinterpret_cast<uint32_t*>(buffer);
+    for (size_t i = 0 ; i < ledsPerStrip; ++i) {
+        uint32_t pixels[ledStrips];
+        if constexpr (ledStrips > 0) pixels[0] = sampler(0, i);
+        if constexpr (ledStrips > 1) pixels[1] = sampler(1, i);
+        if constexpr (ledStrips > 2) pixels[2] = sampler(2, i);
+        if constexpr (ledStrips > 3) pixels[3] = sampler(3, i);
+        if constexpr (ledStrips > 4) pixels[4] = sampler(4, i);
+        if constexpr (ledStrips > 5) pixels[5] = sampler(5, i);
+        if constexpr (ledStrips > 6) pixels[6] = sampler(6, i);
+        if constexpr (ledStrips > 7) pixels[7] = sampler(7, i);
+        pushPixels<ledStrips>(out, pixels);
+    }
+}
+
+// Fills a DMA buffer where the number of LED strips is determined at runtime.
+// |Sampler| is a lambda function to retrieve a pixel from each strip
+//      signature: uint32_t Sampler(size_t strip, size_t pixel)
+template <typename Sampler>
+void updateBuffer(uint8_t* buffer, size_t ledStrips, size_t ledsPerStrip, Sampler sampler) {
+    switch (ledStrips) {
+        case 1: updateBuffer<1, Sampler>(buffer, ledsPerStrip, std::move(sampler)); break;
+        case 2: updateBuffer<2, Sampler>(buffer, ledsPerStrip, std::move(sampler)); break;
+        case 3: updateBuffer<3, Sampler>(buffer, ledsPerStrip, std::move(sampler)); break;
+        case 4: updateBuffer<4, Sampler>(buffer, ledsPerStrip, std::move(sampler)); break;
+        case 5: updateBuffer<5, Sampler>(buffer, ledsPerStrip, std::move(sampler)); break;
+        case 6: updateBuffer<6, Sampler>(buffer, ledsPerStrip, std::move(sampler)); break;
+        case 7: updateBuffer<7, Sampler>(buffer, ledsPerStrip, std::move(sampler)); break;
+        case 8: updateBuffer<8, Sampler>(buffer, ledsPerStrip, std::move(sampler)); break;
+        default: __builtin_unreachable(); break;
+    }
+}
+
 } // namespace led
