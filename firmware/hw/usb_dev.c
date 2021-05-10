@@ -77,6 +77,7 @@ volatile uint32_t perf_receivedKeyframeCounter;
 #define index(endpoint, tx, odd) (((endpoint) << 2) | ((tx) << 1) | (odd))
 #define stat2tableindex(stat)       ((stat) >> 2)
 
+#define buf2packet(addr) (usb_packet_t*)((uint8_t*)(addr) - offsetof(usb_packet_t, buf))
 
 static union {
  struct {
@@ -428,13 +429,11 @@ static void usb_try_rx(unsigned index)
     // back-pressure to the host controller.)
 
     bdt_t *b = &table[index];
-    usb_packet_t *packet = (usb_packet_t *)((uint8_t *)(b->addr) - 4);
+    usb_packet_t *packet = buf2packet(b->addr);
     unsigned len = b->desc >> 16;
 
     if (len > 0) {
-
-        packet->len = len;
-        if (!usb_rx_handler(packet)) {
+        if (!usb_rx_handler(packet, len)) {
             // Deferred! We'll try again in usb_rx_resume()
 
             __disable_irq();

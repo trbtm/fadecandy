@@ -38,8 +38,6 @@
 #include <stdint.h>
 
 typedef struct usb_packet_struct {
-    uint16_t len;
-    uint16_t reserved;
     uint8_t buf[64];
 } usb_packet_t;
 
@@ -50,6 +48,7 @@ extern "C" {
 void usb_init_mem();
 usb_packet_t * usb_malloc(void);
 void usb_free(usb_packet_t *p);
+void usb_clear_packet(usb_packet_t* p);
 
 #ifdef __cplusplus
 }

@@ -39,9 +39,9 @@
 #include "mk20dx128.h"
 
 __attribute__ ((section(".usbbuffers"), used))
-unsigned char usb_buffer_memory[NUM_USB_BUFFERS * sizeof(usb_packet_t)];
+unsigned char usb_buffer_memory[CONFIG_NUM_USB_BUFFERS * sizeof(usb_packet_t)];
 
-static uint32_t usb_buffer_available[(NUM_USB_BUFFERS + 31) / 32];
+static uint32_t usb_buffer_available[(CONFIG_NUM_USB_BUFFERS + 31) / 32];
 
 void usb_init_mem()
 {
@@ -108,3 +108,8 @@ void usb_free(usb_packet_t *p)
     __enable_irq();
 }
 
+void usb_clear_packet(usb_packet_t* p)
+{
+    for (unsigned i = 0; i < 64; ++i)
+        p->buf[i] = 0;
+}

@@ -53,7 +53,7 @@ void usb_isr(void);
 
 // External handler for received USB packets. Called in ISR context or main loop context.
 // Returns true if the packet can be handled immediately, or false if it must be deferred.
-int usb_rx_handler(usb_packet_t *packet);
+int usb_rx_handler(usb_packet_t *packet, size_t len);
 
 // Called to retry packets that have been deferred.
 void usb_rx_resume();
