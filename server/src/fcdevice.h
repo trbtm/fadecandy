@@ -51,22 +51,17 @@ public:
 
     // Framebuffer accessor
     uint8_t *fbPixel(unsigned num) {
-        return &mFramebuffer[num / PIXELS_PER_PACKET].data[1 + 3 * (num % PIXELS_PER_PACKET)];
+        return &mFramebuffer[num / PIXELS_PER_PACKET].data[3 * (num % PIXELS_PER_PACKET)];
     }
  
 private:
-    static const unsigned PIXELS_PER_PACKET = 20;
-    static const unsigned LUT_ENTRIES_PER_PACKET = 31;
+    static const unsigned PIXELS_PER_PACKET = 21;
     static const unsigned FRAMEBUFFER_PACKETS = (NUM_PIXELS + PIXELS_PER_PACKET - 1) / PIXELS_PER_PACKET;
-    static const unsigned LUT_PACKETS = 25;
-    static const unsigned LUT_ENTRIES = 257;
     static const unsigned OUT_ENDPOINT = 1;
     static const unsigned MAX_FRAMES_PENDING = 2;
 
     static const uint8_t TYPE_FRAMEBUFFER = 0x00;
-    static const uint8_t TYPE_LUT = 0x40;
     static const uint8_t TYPE_CONFIG = 0x80;
-    static const uint8_t FINAL = 0x20;
 
     static const uint8_t CFLAG_NO_DITHERING     = (1 << 0);
     static const uint8_t CFLAG_NO_INTERPOLATION = (1 << 1);
@@ -104,7 +99,6 @@ private:
 
     libusb_device_descriptor mDD;
     Packet mFramebuffer[FRAMEBUFFER_PACKETS];
-    Packet mColorLUT[LUT_PACKETS];
     Packet mFirmwareConfig;
 
     bool submitTransfer(Transfer *fct);

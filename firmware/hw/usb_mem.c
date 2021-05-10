@@ -72,7 +72,7 @@ usb_packet_t * usb_malloc(void)
     } while (idx < sizeof(usb_buffer_available) / sizeof(usb_buffer_available[0]));
 
     n = __builtin_clz(avail) + (idx << 5);
-    if (n >= NUM_USB_BUFFERS) {
+    if (n >= CONFIG_NUM_USB_BUFFERS) {
         // Oops, no more memory. This is a fatal error- our firmware should be designed
         // to never allocate more buffers than we have. Wedge ourselves in an infinite
         // loop and the watchdog will reset.
@@ -92,7 +92,7 @@ void usb_free(usb_packet_t *p)
     unsigned int n, mask, idx;
 
     n = ((uint8_t *)p - usb_buffer_memory) / sizeof(usb_packet_t);
-    if (n >= NUM_USB_BUFFERS) {
+    if (n >= CONFIG_NUM_USB_BUFFERS) {
         // Invalid pointer.  Wait for watchdog reset.
         crash("usb bad free");
     }

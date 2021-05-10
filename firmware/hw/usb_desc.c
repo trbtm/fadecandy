@@ -69,9 +69,9 @@ static const uint8_t device_descriptor[] = {
         0,                                      // bDeviceSubClass
         0,                                      // bDeviceProtocol
         EP0_SIZE,                               // bMaxPacketSize0
-        LSB(VENDOR_ID), MSB(VENDOR_ID),         // idVendor
-        LSB(PRODUCT_ID), MSB(PRODUCT_ID),       // idProduct
-        LSB(DEVICE_VER), MSB(DEVICE_VER),       // bcdDevice
+        LSB(CONFIG_VENDOR_ID), MSB(CONFIG_VENDOR_ID),         // idVendor
+        LSB(CONFIG_PRODUCT_ID), MSB(CONFIG_PRODUCT_ID),       // idProduct
+        LSB(CONFIG_DEVICE_VER), MSB(CONFIG_DEVICE_VER),       // bcdDevice
         1,                                      // iManufacturer
         2,                                      // iProduct
         3,                                      // iSerialNumber
@@ -157,19 +157,19 @@ static const struct usb_string_descriptor_struct string0 = {
 };
 
 static const struct usb_string_descriptor_struct usb_string_manufacturer_name = {
-    2 + MANUFACTURER_NAME_LEN * 2,
+    2 + CONFIG_MANUFACTURER_NAME_LEN * 2,
     3,
-    MANUFACTURER_NAME
+    CONFIG_MANUFACTURER_NAME
 };
 static const struct usb_string_descriptor_struct usb_string_product_name = {
-    2 + PRODUCT_NAME_LEN * 2,
+    2 + CONFIG_PRODUCT_NAME_LEN * 2,
     3,
-    PRODUCT_NAME
+    CONFIG_PRODUCT_NAME
 };
 static const struct usb_string_descriptor_struct usb_string_dfu_name = {
-    2 + DFU_NAME_LEN * 2,
+    2 + CONFIG_DFU_NAME_LEN * 2,
     3,
-    DFU_NAME
+    CONFIG_DFU_NAME
 };
 
 // Microsoft OS String Descriptor. See: https://github.com/pbatard/libwdi/wiki/WCID-Devices

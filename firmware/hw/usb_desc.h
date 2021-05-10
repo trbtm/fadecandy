@@ -74,12 +74,6 @@ If these instructions are missing steps or could be improved, please
 let me know?  http://forum.pjrc.com/forums/4-Suggestions-amp-Bug-Reports
 */
 
-#define MANUFACTURER_NAME         {'s','c','a','n','l','i','m','e'}
-#define MANUFACTURER_NAME_LEN     8
-#define PRODUCT_NAME              {'F','a','d','e','c','a','n','d','y'}
-#define PRODUCT_NAME_LEN          9
-#define DFU_NAME                  {'F','a','d','e','c','a','n','d','y',' ','B','o','o','t','l','o','a','d','e','r'}
-#define DFU_NAME_LEN              20
 #define EP0_SIZE                  64
 #define NUM_ENDPOINTS             1
 #define NUM_INTERFACE             2
