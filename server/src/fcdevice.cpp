@@ -71,6 +71,14 @@ FCDevice::FCDevice(libusb_device *device, bool verbose)
     for (unsigned i = 0; i < FRAMEBUFFER_PACKETS; ++i) {
         mFramebuffer[i].control = TYPE_FRAMEBUFFER | i;
     }
+    mFramebuffer[FRAMEBUFFER_PACKETS - 1].control |= FINAL;
+
+    // Color LUT headers
+    memset(mColorLUT, 0, sizeof mColorLUT);
+    for (unsigned i = 0; i < LUT_PACKETS; ++i) {
+        mColorLUT[i].control = TYPE_LUT | i;
+    }
+    mColorLUT[LUT_PACKETS - 1].control |= FINAL;
 }
 
 FCDevice::~FCDevice()
@@ -294,6 +302,61 @@ void FCDevice::writeColorCorrection(const Value &color)
     } else if (!color.IsNull() && mVerbose) {
         std::clog << "Color correction value must be a JSON dictionary object.\n";
     }
+
+    /*
+     * Calculate the color LUT, stowing the result in an array of USB packets.
+     */
+
+    Packet *packet = mColorLUT;
+    const unsigned firstByteOffset = 1;  // Skip padding byte
+    unsigned byteOffset = firstByteOffset;
+
+    for (unsigned channel = 0; channel < 3; channel++) {
+        for (unsigned entry = 0; entry < LUT_ENTRIES; entry++) {
+            double output;
+
+            /*
+             * Normalized input value corresponding to this LUT entry.
+             * Ranges from 0 to slightly higher than 1. (The last LUT entry
+             * can't quite be reached.)
+             */
+            double input = (entry << 8) / 65535.0;
+
+            // Scale by whitepoint before anything else
+            input *= whitepoint[channel];
+
+            // Is this entry part of the linear section still?
+            if (input * linearSlope <= linearCutoff) {
+
+                // Output value is below linearCutoff. We're still in the linear portion of the curve
+                output = input * linearSlope;
+
+            } else {
+
+                // Nonlinear portion of the curve. This starts right where the linear portion leaves
+                // off. We need to avoid any discontinuity.
+
+                double nonlinearInput = input - (linearSlope * linearCutoff);
+                double scale = 1.0 - linearCutoff;
+                output = linearCutoff + pow(nonlinearInput / scale, gamma) * scale;
+            }
+
+            // Round to the nearest integer, and clamp. Overflow-safe.
+            int64_t longValue = (output * 0xFFFF) + 0.5;
+            int intValue = std::max<int64_t>(0, std::min<int64_t>(0xFFFF, longValue));
+
+            // Store LUT entry, little-endian order.
+            packet->data[byteOffset++] = uint8_t(intValue);
+            packet->data[byteOffset++] = uint8_t(intValue >> 8);
+            if (byteOffset >= sizeof packet->data) {
+                byteOffset = firstByteOffset;
+                packet++;
+            }
+        }
+    }
+
+    // Start asynchronously sending the LUT.
+    submitTransfer(new Transfer(this, &mColorLUT, sizeof mColorLUT));
 }
 
 void FCDevice::writeFramebuffer()

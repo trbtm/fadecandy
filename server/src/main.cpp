@@ -43,7 +43,7 @@ const char *kDefaultConfig =
     "        \"devices\": [\n"
     "            {\n"
     "                \"type\": \"fadecandy\",\n"
-    "                \"map\": [[ 0, 0, 0, 720 ]]\n"
+    "                \"map\": [[ 0, 0, 0, 512 ]]\n"
     "            }\n"
     "        ]\n"
     "    }\n";
