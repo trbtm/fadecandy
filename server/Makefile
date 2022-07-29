@@ -149,7 +149,7 @@ ifeq ($(UNAME), Linux)
 		libusbx/libusb/os/threads_posix.c
 
 	LIBS += -lpthread -lrt
-	CPPFLAGS += -DOS_LINUX -DTHREADS_POSIX -DPOLL_NFDS_TYPE=nfds_t \
+	CPPFLAGS += -DOS_LINUX -DTHREADS_POSIX -DPOLL_NFDS_TYPE=nfds_t -D_GNU_SOURCE \
 		-DLIBUSB_CALL= -DDEFAULT_VISIBILITY= -DHAVE_GETTIMEOFDAY -DHAVE_POLL_H \
 		-DHAVE_ASM_TYPES_H -DHAVE_SYS_SOCKET_H -DHAVE_LINUX_NETLINK_H -DHAVE_LINUX_FILTER_H
 endif
@@ -206,4 +206,11 @@ $(SUBMODULES_TARGETS):
 	cd .. && git submodule update --init -- server/$@ && cd server/$@ && git checkout -f HEAD && git clean -dfx
 submodules: $(SUBMODULES_TARGETS)
 
-.PHONY: submodules $(SUBMODULES_TARGETS) clean all
+# Simple installer, assumes certain system directories
+install:
+	cp fcserver /usr/local/bin/
+	cp fcserver.service /lib/systemd/system/
+	if [ ! -d /etc/fcserver ]; then mkdir /etc/fcserver; fi
+	if [ ! -f /etc/fcserver/config.json ]; then cp config.json /etc/fcserver/; fi
+
+.PHONY: submodules $(SUBMODULES_TARGETS) clean all install

@@ -42,6 +42,20 @@ If you want to remove the compiled binary and source files run:
 $ make clean
 ```
 
+To locally install the binary, a default configuration file (unless one already exists), and SystemD service
+to launch the FadeCandy server, run this command:
+
+```bash
+$ sudo make install
+```
+
+After editing the configuration file in **/etc/fcserver/config.json**, you can enable and start the service
+with the following commands. The service will automatically start after a reboot unless disabled again.
+
+```base
+$ sudo systemctl enable fcserver
+$ sudo systemctl start fcserver
+```
 
 Build using CMake
 -----------------

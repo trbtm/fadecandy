@@ -1,0 +1,11 @@
+[Unit]
+Description=Fadecandy USB LED controller server
+
+[Service]
+ExecStart=/usr/local/bin/fcserver
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
