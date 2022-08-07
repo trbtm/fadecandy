@@ -326,21 +326,13 @@ void FCDevice::writeColorCorrection(const Value &color)
             input *= whitepoint[channel];
 
             // Is this entry part of the linear section still?
-            if (input * linearSlope <= linearCutoff) {
-
-                // Output value is below linearCutoff. We're still in the linear portion of the curve
-                output = input * linearSlope;
-
-            } else {
-
+            output = input * linearSlope;
+            if (output > linearCutoff) {
                 // Nonlinear portion of the curve. This starts right where the linear portion leaves
                 // off. We need to avoid any discontinuity.
-
-                double nonlinearInput = input - (linearSlope * linearCutoff);
-                double scale = 1.0 - linearCutoff;
-                output = linearCutoff + pow(nonlinearInput / scale, gamma) * scale;
+                double linearRange = linearCutoff / linearSlope;
+                output = linearCutoff + pow((input - linearRange) / (1.0 - linearRange), gamma) * (1.0 - linearCutoff);
             }
-
             // Round to the nearest integer, and clamp. Overflow-safe.
             int64_t longValue = (output * 0xFFFF) + 0.5;
             int intValue = std::max<int64_t>(0, std::min<int64_t>(0xFFFF, longValue));

@@ -398,19 +398,12 @@ void GlimmerDevice::writeColorCorrection(const Value &color)
             input *= whitepoint[channel];
 
             // Is this entry part of the linear section still?
-            if (input * linearSlope <= linearCutoff) {
-
-                // Output value is below linearCutoff. We're still in the linear portion of the curve
-                output = input * linearSlope;
-
-            } else {
-
+            output = input * linearSlope;
+            if (output > linearCutoff) {
                 // Nonlinear portion of the curve. This starts right where the linear portion leaves
                 // off. We need to avoid any discontinuity.
-
-                double nonlinearInput = input - (linearSlope * linearCutoff);
-                double scale = 1.0 - linearCutoff;
-                output = linearCutoff + pow(nonlinearInput / scale, gamma) * scale;
+                double linearRange = linearCutoff / linearSlope;
+                output = linearCutoff + pow((input - linearRange) / (1.0 - linearRange), gamma) * (1.0 - linearCutoff);
             }
 
             // Generate the correct number of bits per color component for the frame buffer
