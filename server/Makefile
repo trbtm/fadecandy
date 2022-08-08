@@ -195,7 +195,7 @@ $(TARGET): $(SUBMODULES_TARGETS) $(OBJS)
 -include $(OBJS:.o=.d)
 
 src/httpdocs.cpp: http/* http/js/* http/css/*
-	(cd http; python manifest.py) > $@
+	(cd http; python3 manifest.py) > $@
 
 clean:
 	rm -f $(CLEAN_FILES) $(TARGET)
