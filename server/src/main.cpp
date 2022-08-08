@@ -124,7 +124,7 @@ int main(int argc, char **argv)
 
     FCServer server(config);
     if (server.hasError()) {
-        fprintf(stderr, "Configuration errors:\n%s", server.errorText());
+        fprintf(stderr, "Configuration errors:\n%s", server.errorText().c_str());
         return 5;
     }
     if (!server.start(usb)) {

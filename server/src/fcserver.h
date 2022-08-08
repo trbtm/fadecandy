@@ -41,7 +41,7 @@ public:
 
     FCServer(rapidjson::Document &config);
 
-    const char *errorText() const { return mError.str().c_str(); }
+    std::string errorText() const { return mError.str(); }
     bool hasError() const { return !mError.str().empty(); }
 
     bool start(libusb_context *usb);
