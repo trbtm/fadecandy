@@ -239,9 +239,9 @@ below as a string or custom timings using the format: `[ freq, ri, t0h, t1h ]`
 Timing Name       | Equivalent Definition     |
 ----------------- | ------------------------- |
 default           | [ 800000, 300, 60, 176 ]  |
-sk6812            | [ 800000, 100, 56, 172 ]  |
+sk6812            | [ 800000, 100, 60, 176 ]  |
 sk6812-fast       | [ 900000, 100, 44, 150 ]  |
-sk6812-extreme    | [ 1000000, 80, 40, 140 ]  |
+sk6812-extreme    | [ 960000, 80, 50, 160 ]  |
 
 With a little care, you may be able to increase your refresh rates by quite a lot. In general,
 `t0h` and `t1h` must be reduced as `freq` is increased. If the LEDs starts flickering uncontrollably,

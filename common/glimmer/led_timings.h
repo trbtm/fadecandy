@@ -59,9 +59,9 @@ inline bool validateTimings(const Timings& timings) {
 constexpr Timings timingsDefault { 800000, 300, 60, 176 };
 
 // SK6812 allows a shorter reset interval and can be overclocked reliably up to 1 MHz.
-constexpr Timings timingsSK6812 { 800000, 100, 56, 172 };
+constexpr Timings timingsSK6812 { 800000, 100, 60, 176 };
 constexpr Timings timingsSK6812Fast { 900000, 100, 44, 150 };
-constexpr Timings timingsSK6812Extreme { 1000000, 80, 40, 140 };
+constexpr Timings timingsSK6812Extreme { 960000, 80, 50, 160 };
 
 struct NamedTimings {
     const char* name;

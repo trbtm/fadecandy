@@ -40,6 +40,27 @@ FLEXRAM_DATA volatile bool writeInProgress = false;
 FLEXRAM_DATA volatile uint64_t writeFinishedAt = 0;
 FLEXRAM_DATA uint32_t resetInterval;
 
+// When set to 1, sends oscilloscope trigger pulses using the TDO pin.
+#define TRACE 0
+
+inline void trace(bool bit) {
+#if TRACE
+    if (bit) {
+        GPIOA_PSOR |= 0x04;
+    } else {
+        GPIOA_PCOR |= 0x04;
+    }
+#endif
+}
+
+inline void initTrace() {
+#if TRACE
+    GPIOA_PCOR |= 0x04;
+    GPIOA_PDDR |= 0x04;
+    PORTA_PCR2 = PORT_PCR_MUX(1);
+#endif
+}
+
 bool init(size_t ledsPerStrip, const Timings& timings) {
     // Validate parameters.
     if (ledsPerStrip == 0 || !validateTimings(timings)) return false;
@@ -49,6 +70,8 @@ bool init(size_t ledsPerStrip, const Timings& timings) {
 
     const size_t bufsize = bufferSize(ledsPerStrip);
     resetInterval = timings.resetInterval;
+
+    initTrace();
 
     // configure the 8 output pins
     GPIOD_PCOR = 0xFF;
@@ -62,43 +85,46 @@ bool init(size_t ledsPerStrip, const Timings& timings) {
     pinMode(5, OUTPUT);     // strip #8
 
     // create the two waveforms for WS2811 low and high bits
-    analogWriteFrequency(3, timings.frequency);
-    analogWriteFrequency(4, timings.frequency);
-    analogWrite(3, timings.t0h);
-    analogWrite(4, timings.t1h);
+    //FTM1_CONF = 0; // default configuration
+    //FTM1_FMS = 0; // default fault mode status
+    FTM1_MODE = FTM_MODE_WPDIS | FTM_MODE_FTMEN; // enable timer
+    FTM1_SC = 0; // stop the clock
+    // FTM1_CNTIN = 0; // default counter starts at zero
+    FTM1_CNT = 0; // reset counter to initial value
+    uint32_t mod = (F_BUS + timings.frequency / 2) / timings.frequency;
+    FTM1_MOD = mod - 1; // set timer modulus for frequency, rounded up
+    FTM1_C0V = (mod * timings.t0h) >> 8; // set low bit phase
+    FTM1_C1V = (mod * timings.t1h) >> 8; // set high bit phase
+    FTM1_C0SC = 0x69; // start high and become low on match, trigger DMA
+    FTM1_C1SC = 0x69; // start high and become low on match, trigger DMA
 
-    // pin 16 triggers DMA(port B) on rising edge (configure for pin 3's waveform)
-    CORE_PIN16_CONFIG = PORT_PCR_IRQC(1) | PORT_PCR_MUX(3);
-    pinMode(3, INPUT_PULLUP); // pin 3 no longer needed
-
-    // pin 15 triggers DMA(port C) on falling edge of low duty waveform
-    // pin 15 and 16 must be connected by the user: 16 is output, 15 is input
-    pinMode(15, INPUT);
-    CORE_PIN15_CONFIG = PORT_PCR_IRQC(2) | PORT_PCR_MUX(1);
-
-    // pin 4 triggers DMA(port A) on falling edge of high duty waveform
-    CORE_PIN4_CONFIG = PORT_PCR_IRQC(2) | PORT_PCR_MUX(3);
+    // trigger DMA request on rising edge of channel 0 via PORTB (pin 16)
+    PORTB_PCR0 = PORT_PCR_IRQC(1) | PORT_PCR_MUX(3);
 
     // enable clocks to the DMA controller and DMAMUX
     SIM_SCGC7 |= SIM_SCGC7_DMA;
     SIM_SCGC6 |= SIM_SCGC6_DMAMUX;
     DMA_CR = 0;
     DMA_ERQ = 0;
+    // DMA_DCHPRI0 = 0; // default priority
+    // DMA_DCHPRI1 = 1; // default priority
+    // DMA_DCHPRI2 = 2; // default priority
+    // DMA_DCHPRI3 = 3; // default priority
 
-    // DMA channel #1 sets WS2811 high at the beginning of each cycle
-    DMA_TCD1_SADDR = &ONES;
-    DMA_TCD1_SOFF = 0;
-    DMA_TCD1_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
-    DMA_TCD1_NBYTES_MLNO = 1;
-    DMA_TCD1_SLAST = 0;
-    DMA_TCD1_DADDR = &GPIOD_PSOR;
-    DMA_TCD1_DOFF = 0;
-    DMA_TCD1_CITER_ELINKNO = bufsize;
-    DMA_TCD1_DLASTSGA = 0;
-    DMA_TCD1_CSR = DMA_TCD_CSR_DREQ;
-    DMA_TCD1_BITER_ELINKNO = bufsize;
+    // DMA channel #3 (highest priority) sets WS2811 high at the beginning of each cycle
+    DMA_TCD3_SADDR = &ONES;
+    DMA_TCD3_SOFF = 0;
+    DMA_TCD3_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
+    DMA_TCD3_NBYTES_MLNO = 1;
+    DMA_TCD3_SLAST = 0;
+    DMA_TCD3_DADDR = &GPIOD_PSOR;
+    DMA_TCD3_DOFF = 0;
+    DMA_TCD3_CITER_ELINKNO = bufsize;
+    DMA_TCD3_DLASTSGA = 0;
+    DMA_TCD3_CSR = DMA_TCD_CSR_DREQ;
+    DMA_TCD3_BITER_ELINKNO = bufsize;
 
-    // DMA channel #2 writes the pixel data at 20% of the cycle
+    // DMA channel #2 (second priority) writes the pixel data at 23% of the cycle
     DMA_TCD2_SOFF = 1;
     DMA_TCD2_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
     DMA_TCD2_NBYTES_MLNO = 1;
@@ -110,81 +136,75 @@ bool init(size_t ledsPerStrip, const Timings& timings) {
     DMA_TCD2_CSR = DMA_TCD_CSR_DREQ;
     DMA_TCD2_BITER_ELINKNO = bufsize;
 
-    // DMA channel #3 clear all the pins low at 48% of the cycle
-    DMA_TCD3_SADDR = &ONES;
-    DMA_TCD3_SOFF = 0;
-    DMA_TCD3_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
-    DMA_TCD3_NBYTES_MLNO = 1;
-    DMA_TCD3_SLAST = 0;
-    DMA_TCD3_DADDR = &GPIOD_PCOR;
-    DMA_TCD3_DOFF = 0;
-    DMA_TCD3_CITER_ELINKNO = bufsize;
-    DMA_TCD3_DLASTSGA = 0;
-    DMA_TCD3_CSR = DMA_TCD_CSR_DREQ | DMA_TCD_CSR_INTMAJOR;
-    DMA_TCD3_BITER_ELINKNO = bufsize;
+    // DMA channel #1 (third priority) clear all the pins low at 69% of the cycle
+    DMA_TCD1_SADDR = &ONES;
+    DMA_TCD1_SOFF = 0;
+    DMA_TCD1_ATTR = DMA_TCD_ATTR_SSIZE(0) | DMA_TCD_ATTR_DSIZE(0);
+    DMA_TCD1_NBYTES_MLNO = 1;
+    DMA_TCD1_SLAST = 0;
+    DMA_TCD1_DADDR = &GPIOD_PCOR;
+    DMA_TCD1_DOFF = 0;
+    DMA_TCD1_CITER_ELINKNO = bufsize;
+    DMA_TCD1_DLASTSGA = 0;
+    DMA_TCD1_CSR = DMA_TCD_CSR_DREQ | DMA_TCD_CSR_INTMAJOR;
+    DMA_TCD1_BITER_ELINKNO = bufsize;
 
     // route the edge detect interrupts to trigger the 3 channels
-    DMAMUX0_CHCFG1 = 0;
-    DMAMUX0_CHCFG1 = DMAMUX_SOURCE_PORTB | DMAMUX_ENABLE;
-    DMAMUX0_CHCFG2 = 0;
-    DMAMUX0_CHCFG2 = DMAMUX_SOURCE_PORTC | DMAMUX_ENABLE;
     DMAMUX0_CHCFG3 = 0;
-    DMAMUX0_CHCFG3 = DMAMUX_SOURCE_PORTA | DMAMUX_ENABLE;
+    DMAMUX0_CHCFG3 = DMAMUX_SOURCE_PORTB | DMAMUX_ENABLE; // trigger on rising edge of channel 0 via PORTB
+    DMAMUX0_CHCFG2 = 0;
+    DMAMUX0_CHCFG2 = DMAMUX_SOURCE_FTM1_CH0 | DMAMUX_ENABLE; // trigger on falling edge of channel 0
+    DMAMUX0_CHCFG1 = 0;
+    DMAMUX0_CHCFG1 = DMAMUX_SOURCE_FTM1_CH1 | DMAMUX_ENABLE; // trigger on falling edge of channel 1
 
-    // enable a done interrupts when channel #3 completes
-    NVIC_ENABLE_IRQ(IRQ_DMA_CH3);
-    //pinMode(1, OUTPUT); // testing: oscilloscope trigger
+    // enable a done interrupts when channel #1 completes
+    NVIC_ENABLE_IRQ(IRQ_DMA_CH1);
+    FTM1_SC = FTM_SC_CLKS(1) | FTM_SC_PS(0); // start the timer
     return true;
 }
 
 void write(const uint8_t* buffer) {
-    // wait for all prior DMA operations to complete
+    // Wait for all prior DMA operations to complete.
     while (writeInProgress);
 
-    // wait for LED reset to complete
+    // Wait for LED reset to complete.
     uint64_t now;
     do {
         now = micros64();
-        // for some weird reason, the compiler may optimize this code in a way that exits
-        // exit early unless we rule out now <= writeFinishedAt even though I verified that
-        // the clock is monotonic
-    } while (now <= writeFinishedAt || now - writeFinishedAt < resetInterval);
+    } while (now < writeFinishedAt + resetInterval);
 
+    // Start the next DMA transfer.
+    writeInProgress = true;
     DMA_TCD2_SADDR = buffer;
 
-    // ok to start, but we must be very careful to begin
-    // without any prior DMA requests pending
-    uint32_t sc = FTM1_SC;
-    uint32_t cv = FTM1_C1V;
+    trace(true);
     __disable_irq();
-    // CAUTION: this code is timing critical.  Any editing should be
-    // tested by verifying the oscilloscope trigger pulse at the end
-    // always occurs while both waveforms are still low.  Simply
-    // counting CPU cycles does not take into account other complex
-    // factors, like flash cache misses and bus arbitration from USB
-    // or other DMA.  Testing should be done with the oscilloscope
-    // display set at infinite persistence and a variety of other I/O
-    // performed to create realistic bus usage.  Even then, you really
-    // should not mess with this timing critical code!
-    writeInProgress = true;
-    while (FTM1_CNT <= cv) ; 
-    while (FTM1_CNT > cv) ; // wait for beginning of an 800 kHz cycle
-    while (FTM1_CNT < cv) ;
-    FTM1_SC = sc & 0xE7;    // stop FTM1 timer (hopefully before it rolls over)
-    //digitalWriteFast(1, HIGH); // oscilloscope trigger
-    PORTB_ISFR = (1<<0);    // clear any prior rising edge
-    PORTC_ISFR = (1<<0);    // clear any prior low duty falling edge
-    PORTA_ISFR = (1<<13);   // clear any prior high duty falling edge
-    DMA_ERQ = 0x0E;     // enable all 3 DMA channels
-    FTM1_SC = sc;       // restart FTM1 timer
-    //digitalWriteFast(1, LOW);
+
+    // Reset timer channel 0 interrupt and DMA trigger to prevent premature triggering
+    // when DMA requests are re-enabled below.
+    FTM1_C0SC = 0x28;
+
+    // Wait for timer channel 1 to elapse twice.
+    while (FTM1_C1SC & 0x80) FTM1_C1SC = 0x28;
+    while (!(FTM1_C1SC & 0x80));
+
+    // Immediately clear pending timer interrupts and enable DMA triggers.
+    // The order of these operations is critical to ensure the correct timing.
+    // DMA channel 3 must be re-enabled in the interval between timer channel 1
+    // elapsing and the next cycle beginning.
+    PORTB_ISFR = 1 << 0; // clear interrupt that will trigger DMA channel 3 on the next cycle
+    DMA_ERQ = 0x0e; // enable requests for DMA channel 3, 2, and 1 in that order
+    FTM1_C0SC = 0x69; // restore DMA trigger for DMA channel 2
+    FTM1_C1SC = 0x69; // restore DMA trigger for DMA channel 1 
+
     __enable_irq();
+    trace(false);
 }
 
 } // namespace glimmer::led
 
-extern "C" void dma_ch3_isr() {
-    DMA_CINT = 3;
+extern "C" void dma_ch1_isr() {
+    DMA_CINT = 1;
     glimmer::led::writeFinishedAt = micros64();
     glimmer::led::writeInProgress = false;
 }
