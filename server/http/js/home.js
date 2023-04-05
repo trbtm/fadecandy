@@ -76,7 +76,7 @@ jQuery(function ($) {
         '));
 
         // Other initialization is device-type-specific
-        if (json.type == "fadecandy") {
+        if (json.type == "fadecandy" || json.type == "glimmer") {
             this.initTypeFadecandy();
         } else if (json.type == "apa102spi") {
             this.initTypeAPA102SPI();
